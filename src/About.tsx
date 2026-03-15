@@ -15,7 +15,7 @@ export function AboutPage() {
 
     <p>
       If you find the tool useful, want to support me, or why not,
-      both of those things, feel free
+      both, feel free
       to <a href="https://buymeacoffee.com/guimotron">
         buy me a coffee
       </a>!
@@ -28,12 +28,8 @@ export function AboutPage() {
     <p>
       An app built to offer custom functionality that I found lacking
       in other applications.
-    </p>
-    <p>
-      It does not aim to be production-level code.
-      Rather, I took the opportunity to play around and learn about
-      frontend and agentic-coding technologies, while developing
-      something useful for myself and hopefully for others too!
+
+      Source code can be found in <a href="https://github.com/Flood1993/chesslab">Github</a>.
     </p>
 
     <h2>Opening training</h2>
