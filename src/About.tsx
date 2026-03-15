@@ -4,7 +4,7 @@ export function AboutPage() {
     <p>
       ¡Qué pasa, gente! My name is Guillermo, aka Guimotron as per
       my <a href="https://www.youtube.com/@guimotron">
-        <img className="img-inline" src="/svg/youtube.svg" alt=""></img>
+        <img className="img-inline" src={`${import.meta.env.BASE_URL}svg/youtube.svg`} alt=""></img>
         Youtube channel
       </a>.
       In late 2024, I embarked on a journey to reach 2000 rating on Lichess,
@@ -21,7 +21,7 @@ export function AboutPage() {
       Support is always appreciated but never needed.
     </p>
 
-    <img className="img-author" src="/img/guimotron.jpeg" alt=""></img>
+    <img className="img-author" src={`${import.meta.env.BASE_URL}img/guimotron.jpeg`} alt=""></img>
 
     <h1>About ChessLab</h1>
     <p>

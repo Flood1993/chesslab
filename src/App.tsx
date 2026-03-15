@@ -11,17 +11,16 @@ import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessop
 import { parseSan } from "chessops/san";
 import { AboutPage } from "./About";
 
-const url: string = "http://localhost:5173"
 function playSound(audio: HTMLAudioElement) {
   audio.currentTime = 0;
   audio.play();
 }
 
-const audioCapture = new Audio(`${url}/sound/Capture.mp3`);
-const audioGameEnd = new Audio(`${url}/sound/Victory.mp3`);
-const audioGameStart = new Audio(`${url}/sound/GenericNotify.mp3`);
-const audioIllegalMove = new Audio(`${url}/sound/Error.mp3`);
-const audioSelfMove = new Audio(`${url}/sound/Move.mp3`);
+const audioCapture = new Audio(`${import.meta.env.BASE_URL}/sound/Capture.mp3`);
+const audioGameEnd = new Audio(`${import.meta.env.BASE_URL}/sound/Victory.mp3`);
+const audioGameStart = new Audio(`${import.meta.env.BASE_URL}/sound/GenericNotify.mp3`);
+const audioIllegalMove = new Audio(`${import.meta.env.BASE_URL}/sound/Error.mp3`);
+const audioSelfMove = new Audio(`${import.meta.env.BASE_URL}/sound/Move.mp3`);
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -480,7 +479,7 @@ function OpeningTrainingPage() {
   // Load PGN and parse all game groups on mount
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/chess/guimotron-openings.pgn', { signal: controller.signal })
+    fetch(`${import.meta.env.BASE_URL}chess/guimotron-openings.pgn`, { signal: controller.signal })
       .then(r => r.text())
       .then(pgnText => {
         const groups = parseAllGameGroups(pgnText);
