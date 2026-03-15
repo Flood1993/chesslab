@@ -12,6 +12,10 @@ All elements
   font-family: Arial, sans-serif;
 }
 
+body {
+  margin: 0;
+}
+
 html {
   color-scheme: dark;
 }
@@ -111,6 +115,31 @@ main {
   margin: 0 0 8px 0;
 }
 
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+}
+
+.icon-btn img {
+  width: 16px;
+  height: 16px;
+}
+
+.game-toggles-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
 .side-panel label {
   display: flex;
   align-items: flex-start;
@@ -131,12 +160,15 @@ main {
 }
 
 #shortcuts {
-  font-family: monospace;
-  font-size: 0.85rem;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+#shortcuts .icon-btn img {
+  width: 32px;
+  height: 32px;
 }
 
 .hint-square {
@@ -151,4 +183,68 @@ kbd {
   padding: 1px 5px;
   font-size: 0.8rem;
   min-width: 50px;
+}
+
+@media (max-width: 700px) {
+  #root {
+    text-align: left;
+  }
+
+  #navbar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  main {
+    padding-top: 0;
+    padding-bottom: 56px;
+  }
+
+  #canvas {
+    width: 100%;
+    padding: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  #canvas.training-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  #board-column {
+    order: 1;
+    width: 100%;
+    gap: 0;
+  }
+
+  #game-toggles {
+    order: 2;
+    padding: 16px;
+  }
+
+  #info {
+    order: 3;
+    padding: 16px;
+  }
+
+  #contref {
+    width: 100%;
+    height: 100vw;
+    overflow: hidden;
+  }
+
+  #shortcuts {
+    padding: 8px 16px;
+  }
+
+  .img-author {
+    display: block;
+    margin: 0 auto;
+    max-width: 100vw;
+  }
 }

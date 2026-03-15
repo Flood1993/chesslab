@@ -182,10 +182,9 @@ function InfoPanel({ showDebug, onToggleDebug, debugInfo }: InfoPanelProps) {
 type OptionsPanelProps = {
   hintOnErrors: boolean;
   onToggleHint: () => void;
-  onResetProgress: () => void;
 };
 
-function OptionsPanel({ hintOnErrors, onToggleHint, onResetProgress }: OptionsPanelProps) {
+function OptionsPanel({ hintOnErrors, onToggleHint }: OptionsPanelProps) {
   return (
     <div className="side-panel">
       <h3>Options</h3>
@@ -193,7 +192,6 @@ function OptionsPanel({ hintOnErrors, onToggleHint, onResetProgress }: OptionsPa
         <input type="checkbox" checked={hintOnErrors} onChange={onToggleHint} />
         Hint on errors
       </label>
-      <button onClick={onResetProgress}>Reset progress</button>
     </div>
   );
 }
@@ -204,12 +202,12 @@ type GameTogglesProps = {
   completedLines: Set<string>;
   onToggle: (name: string) => void;
   onLoadFromLichess: () => void;
+  onResetProgress: () => void;
 };
 
-function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoadFromLichess }: GameTogglesProps) {
+function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoadFromLichess, onResetProgress }: GameTogglesProps) {
   return (
     <div id="game-toggles" className="side-panel">
-      <button onClick={onLoadFromLichess}>Load from Lichess study</button>
       <h3>Openings</h3>
       {gameGroups.map(g => {
         const solvedCount = g.variations.filter(v => completedLines.has(makeLineKey(g.name, v))).length;
@@ -224,6 +222,14 @@ function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoa
           </label>
         );
       })}
+      <div className="game-toggles-actions">
+        <button className="icon-btn" onClick={onResetProgress} title="Reset progress">
+          <img src={`${import.meta.env.BASE_URL}svg/reset.svg`} alt="Reset progress" />
+        </button>
+        <button className="icon-btn" onClick={onLoadFromLichess} title="Load from Lichess study">
+          <img src={`${import.meta.env.BASE_URL}svg/search-internet.svg`} alt="Load from Lichess study" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -567,6 +573,7 @@ function OpeningTrainingPage() {
         completedLines={completedLines}
         onToggle={toggleGame}
         onLoadFromLichess={loadFromLichess}
+        onResetProgress={resetProgress}
       />
       <div id="board-column">
         <div
@@ -574,14 +581,15 @@ function OpeningTrainingPage() {
           ref={containerRef}
         />
         <div id="shortcuts">
-          <span><kbd>SPACE</kbd> Skip current line</span>
+          <button className="icon-btn" onClick={() => fetchLineRef.current()} title="Skip current line">
+            <img src={`${import.meta.env.BASE_URL}svg/next.svg`} alt="Skip current line" />
+          </button>
         </div>
       </div>
       <div id="info">
         <OptionsPanel
           hintOnErrors={hintOnErrors}
           onToggleHint={toggleHintOnErrors}
-          onResetProgress={resetProgress}
         />
         <InfoPanel
           showDebug={showDebug}
