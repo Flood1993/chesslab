@@ -69,6 +69,14 @@ type GameGroup = {
 };
 
 // ---------------------------------------------------------------------------
+// Line key helpers
+// ---------------------------------------------------------------------------
+
+function makeLineKey(groupName: string, variation: Move[]): string {
+  return groupName + ':' + variation.map(m => m.from + m.to + (m.promotion || '')).join(',');
+}
+
+// ---------------------------------------------------------------------------
 // PGN parsing helpers (outside component — no hooks, pure functions)
 // ---------------------------------------------------------------------------
 
@@ -174,9 +182,10 @@ function InfoPanel({ showDebug, onToggleDebug, debugInfo }: InfoPanelProps) {
 type OptionsPanelProps = {
   hintOnErrors: boolean;
   onToggleHint: () => void;
+  onResetProgress: () => void;
 };
 
-function OptionsPanel({ hintOnErrors, onToggleHint }: OptionsPanelProps) {
+function OptionsPanel({ hintOnErrors, onToggleHint, onResetProgress }: OptionsPanelProps) {
   return (
     <div className="side-panel">
       <h3>Options</h3>
@@ -184,6 +193,7 @@ function OptionsPanel({ hintOnErrors, onToggleHint }: OptionsPanelProps) {
         <input type="checkbox" checked={hintOnErrors} onChange={onToggleHint} />
         Hint on errors
       </label>
+      <button onClick={onResetProgress}>Reset progress</button>
     </div>
   );
 }
@@ -191,25 +201,29 @@ function OptionsPanel({ hintOnErrors, onToggleHint }: OptionsPanelProps) {
 type GameTogglesProps = {
   gameGroups: GameGroup[];
   enabledGames: Set<string>;
+  completedLines: Set<string>;
   onToggle: (name: string) => void;
   onLoadFromLichess: () => void;
 };
 
-function GameToggles({ gameGroups, enabledGames, onToggle, onLoadFromLichess }: GameTogglesProps) {
+function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoadFromLichess }: GameTogglesProps) {
   return (
     <div id="game-toggles" className="side-panel">
       <button onClick={onLoadFromLichess}>Load from Lichess study</button>
       <h3>Openings</h3>
-      {gameGroups.map(g => (
-        <label key={g.name}>
-          <input
-            type="checkbox"
-            checked={enabledGames.has(g.name)}
-            onChange={() => onToggle(g.name)}
-          />
-          {g.name}
-        </label>
-      ))}
+      {gameGroups.map(g => {
+        const solvedCount = g.variations.filter(v => completedLines.has(makeLineKey(g.name, v))).length;
+        return (
+          <label key={g.name}>
+            <input
+              type="checkbox"
+              checked={enabledGames.has(g.name)}
+              onChange={() => onToggle(g.name)}
+            />
+            {g.name} [{solvedCount}/{g.variations.length}]
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -238,6 +252,16 @@ function OpeningTrainingPage() {
   const [showDebug, setShowDebug] = useState(false);
   const [hintOnErrors, setHintOnErrors] = useState(true);
   const hintOnErrorsRef = useRef(true);
+
+  const [completedLines, setCompletedLines] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('openingTrainer_completedLines');
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+  const completedLinesRef = useRef<Set<string>>(completedLines);
+  const currentLineKeyRef = useRef<string>('');
+  const lineHasErrorRef = useRef<boolean>(false);
 
   function isCpuTurn(): boolean {
     const curTurn: "black" | "white" = chessLogicRef.current.turn;
@@ -268,6 +292,7 @@ function OpeningTrainingPage() {
       );
       console.log("CANCELLING MOVE");
       updateUi({});
+      lineHasErrorRef.current = true;
       playSound(audioIllegalMove);
       if (hintOnErrorsRef.current && currentExpected) {
         chessgroundRef.current.set({ highlight: { custom: new Map([[currentExpected.from, 'hint-square']]) } });
@@ -316,6 +341,13 @@ function OpeningTrainingPage() {
       console.log("No more moves in line.");
       setExpectedNextMove(undefined);
       playSound(audioGameEnd);
+      const key = currentLineKeyRef.current;
+      if (key && !lineHasErrorRef.current && !completedLinesRef.current.has(key)) {
+        const next = new Set([...completedLinesRef.current, key]);
+        completedLinesRef.current = next;
+        setCompletedLines(next);
+        try { localStorage.setItem('openingTrainer_completedLines', JSON.stringify([...next])); } catch {}
+      }
     }
   }
 
@@ -400,14 +432,17 @@ function OpeningTrainingPage() {
       return;
     }
     const allVariations = groups.flatMap(g =>
-      g.variations.map(v => ({ variation: v, orientation: g.orientation }))
+      g.variations.map(v => ({ variation: v, orientation: g.orientation, key: makeLineKey(g.name, v) }))
     );
-    if (allVariations.length === 0) {
-      console.error('No variations found in enabled games');
+    const remaining = allVariations.filter(item => !completedLinesRef.current.has(item.key));
+    if (remaining.length === 0) {
+      console.log('All lines in enabled openings have been completed.');
       return;
     }
-    console.log(`Picking at random from ${allVariations.length} variations...`);
-    const picked = allVariations[Math.floor(Math.random() * allVariations.length)];
+    console.log(`Picking at random from ${remaining.length} remaining variations...`);
+    const picked = remaining[Math.floor(Math.random() * remaining.length)];
+    currentLineKeyRef.current = picked.key;
+    lineHasErrorRef.current = false;
     handleNewLine(new PracticeLine(picked.orientation, picked.variation));
   }
 
@@ -444,6 +479,13 @@ function OpeningTrainingPage() {
         console.error('Error loading Lichess study:', err);
         alert(`Failed to load study: ${err.message}`);
       });
+  }
+
+  function resetProgress() {
+    const empty = new Set<string>();
+    completedLinesRef.current = empty;
+    setCompletedLines(empty);
+    try { localStorage.removeItem('openingTrainer_completedLines'); } catch {}
   }
 
   function toggleHintOnErrors() {
@@ -522,6 +564,7 @@ function OpeningTrainingPage() {
       <GameToggles
         gameGroups={gameGroups}
         enabledGames={enabledGames}
+        completedLines={completedLines}
         onToggle={toggleGame}
         onLoadFromLichess={loadFromLichess}
       />
@@ -538,6 +581,7 @@ function OpeningTrainingPage() {
         <OptionsPanel
           hintOnErrors={hintOnErrors}
           onToggleHint={toggleHintOnErrors}
+          onResetProgress={resetProgress}
         />
         <InfoPanel
           showDebug={showDebug}
