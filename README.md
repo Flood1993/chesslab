@@ -1,4 +1,8 @@
-# ChessLab
+<div align="center">
+
+![](./public/img/chesslab-banner.png)
+
+</div>
 
 A tool aimed to help people improve at chess.
 

@@ -1,5 +1,6 @@
 export function AboutPage() {
   return <div id="about-page">
+    <img className="img-centered" src={`${import.meta.env.BASE_URL}img/chesslab-banner.png`} alt=""></img>
     <h1>About the author</h1>
     <p>
       ¡Qué pasa, gente! My name is Guillermo, aka Guimotron as per
@@ -21,7 +22,7 @@ export function AboutPage() {
       Support is always appreciated but never needed.
     </p>
 
-    <img className="img-author" src={`${import.meta.env.BASE_URL}img/guimotron.jpeg`} alt=""></img>
+    <img className="img-centered" src={`${import.meta.env.BASE_URL}img/guimotron.jpeg`} alt=""></img>
 
     <h1>About ChessLab</h1>
     <p>
