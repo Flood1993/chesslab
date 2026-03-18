@@ -40,12 +40,13 @@ class Move {
   toString() {
     return `[${this.from} -> ${this.to}${this.promotion ? "=" + this.promotion : ""}]`;
   }
-}
 
-function movesEqual(a?: Move, b?: Move) {
-  if (!a || !b) return false;
-  // There's some issue with null vs undefined
-  return a.from === b.from && a.to === b.to && (a.promotion ?? null) === (b.promotion ?? null);
+  equals(o?: Move) {
+    if (!this || !o) return false;
+    // There's some issue with null vs undefined
+    return this.from === o.from && this.to === o.to && (this.promotion ?? null) === (o.promotion ?? null);
+
+  }
 }
 
 class PracticeLine {
@@ -292,7 +293,7 @@ function OpeningTrainingPage() {
     chessgroundRef.current.setAutoShapes([]);
 
     const currentExpected = expectedNextMoveRef.current;
-    if (!movesEqual(inputMove, currentExpected)) {
+    if (!inputMove.equals(currentExpected)) {
       console.log(
         `Played unexpected move ${inputMove.toString()} while ${currentExpected?.toString()} was expected, skipping...`
       );
