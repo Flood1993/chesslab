@@ -595,9 +595,9 @@ function OpeningTrainingPage() {
           showDebug={showDebug}
           onToggleDebug={() => setShowDebug(v => !v)}
           debugInfo={{
-            currentLine: JSON.stringify(lineRef.current),
-            lastMove: JSON.stringify(lastAttemptedMove),
-            expectedMove: JSON.stringify(expectedNextMove),
+            currentLine: lineRef.current.toString(),
+            lastMove: lastAttemptedMove?.toString() ?? "",
+            expectedMove: expectedNextMove?.toString() ?? "",
           }}
         />
       </div>
