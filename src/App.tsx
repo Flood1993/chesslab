@@ -10,6 +10,7 @@ import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessops/pgn";
 import { parseSan } from "chessops/san";
 import { AboutPage } from "./About";
+import { Move } from "./basetypes";
 
 function playSound(audio: HTMLAudioElement) {
   audio.currentTime = 0;
@@ -25,29 +26,6 @@ const audioSelfMove = new Audio(`${import.meta.env.BASE_URL}/sound/Move.mp3`);
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
-
-class Move {
-  from: string;
-  to: string;
-  promotion?: "pawn" | "knight" | "bishop" | "rook" | "queen" | "king";
-
-  constructor(from: string, to: string, promotion?: "pawn" | "knight" | "bishop" | "rook" | "queen" | "king") {
-    this.from = from;
-    this.to = to;
-    this.promotion = promotion;
-  }
-
-  toString() {
-    return `[${this.from} -> ${this.to}${this.promotion ? "=" + this.promotion : ""}]`;
-  }
-
-  equals(o?: Move) {
-    if (!this || !o) return false;
-    // There's some issue with null vs undefined
-    return this.from === o.from && this.to === o.to && (this.promotion ?? null) === (o.promotion ?? null);
-
-  }
-}
 
 class PracticeLine {
   orientation: "white" | "black";
