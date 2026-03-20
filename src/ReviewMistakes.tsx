@@ -64,8 +64,11 @@ function checkBlunder(
 
 type Blunder = {
   event: string;
+  result: string;
   white: string;
+  whiteElo: string;
   black: string;
+  blackElo: string;
   date: string;
   fenBefore: string;
   moveNumber: number;
@@ -94,6 +97,9 @@ function extractBlunders(pgnText: string): Blunder[] {
     const startPosResult = startingPosition(game.headers);
     if (!startPosResult.isOk) continue;
 
+    const result = game.headers.get('Result') ?? '';
+    const whiteElo = game.headers.get('WhiteElo') ?? '';
+    const blackElo = game.headers.get('BlackElo') ?? '';
     const date = game.headers.get('Date') ?? '';
     let pos = startPosResult.value as Chess;
 
@@ -129,8 +135,11 @@ function extractBlunders(pgnText: string): Blunder[] {
 
             blunders.push({
               event,
+              result,
               white,
+              whiteElo,
               black,
+              blackElo,
               date,
               fenBefore: makeFen(pos.toSetup()),
               moveNumber: fullMoveNumber,
@@ -237,7 +246,12 @@ export function ReviewMistakesPage() {
               className={`blunder-item${selectedIndex === i ? ' selected' : ''}`}
               onClick={() => setSelectedIndex(i)}
             >
-              {b.white} vs {b.black} - {b.moveNumber}. {b.evalBefore.display} → {b.evalAfter.display}
+              <div className="blunder-item-players">
+                {b.white} vs {b.black}
+              </div>
+              <div className="blunder-item-meta">
+                Move {b.moveNumber} · {b.evalBefore.display} → {b.evalAfter.display}
+              </div>
             </div>
           ))}
         </div>
@@ -253,19 +267,42 @@ export function ReviewMistakesPage() {
         {selected ? (
           <>
             <h3>Details</h3>
-            <p><strong>{selected.event}</strong></p>
-            <p>
-              <strong>{selected.white}</strong><br />
-              vs<br />
-              <strong>{selected.black}</strong>
-            </p>
-            <p>{selected.date}</p>
-            <p>
-              Move {selected.moveNumber} ({selected.isWhiteBlunder ? 'White' : 'Black'} blundered)
-              <br />
-              <strong>{selected.moveSan}</strong>
-            </p>
-            <p>{selected.evalBefore.display} → {selected.evalAfter.display}</p>
+            <div className="blunder-details">
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Event</span>
+                <span>{selected.event}</span>
+              </div>
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Result</span>
+                <span className="blunder-result">{selected.result}</span>
+              </div>
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Date</span>
+                <span>{selected.date}</span>
+              </div>
+              <div className="blunder-detail-divider" />
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">White</span>
+                <span>{selected.white}{selected.whiteElo ? ` (${selected.whiteElo})` : ''}</span>
+              </div>
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Black</span>
+                <span>{selected.black}{selected.blackElo ? ` (${selected.blackElo})` : ''}</span>
+              </div>
+              <div className="blunder-detail-divider" />
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Move</span>
+                <span>{selected.moveNumber}. <strong>{selected.moveSan}</strong></span>
+              </div>
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Side</span>
+                <span>{selected.isWhiteBlunder ? 'White' : 'Black'} blundered</span>
+              </div>
+              <div className="blunder-detail-row">
+                <span className="blunder-detail-label">Eval</span>
+                <span>{selected.evalBefore.display} → {selected.evalAfter.display}</span>
+              </div>
+            </div>
           </>
         ) : (
           <p className="blunder-empty">Select a blunder from the list.</p>
