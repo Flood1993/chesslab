@@ -253,6 +253,43 @@ main {
   letter-spacing: 0.03em;
 }
 
+#mistakes-list {
+  overflow: hidden;
+}
+
+.blunder-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 520px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+}
+
+.blunder-item {
+  padding: 5px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #ccc;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.blunder-item:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.blunder-item.selected {
+  background-color: rgba(213, 229, 0, 0.15);
+  color: #fff;
+}
+
+.blunder-empty {
+  color: #888;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .hint-square {
   background-color: rgba(255, 220, 0, 0.55) !important;
 }
@@ -331,13 +368,16 @@ kbd {
     padding: 8px 16px;
   }
 
-  #review-info {
+  #review-info,
+  #mistakes-list,
+  #mistakes-details {
     width: 100%;
     padding: 16px;
     box-sizing: border-box;
   }
 
-  .move-list {
+  .move-list,
+  .blunder-scroll {
     max-height: 200px;
   }
 

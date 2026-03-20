@@ -3,12 +3,13 @@ import { useState } from "react";
 import { AboutPage } from "./About";
 import { OpeningTrainingPage } from "./OpeningTraining";
 import { ReviewGamePage } from "./ReviewGame";
+import { ReviewMistakesPage } from "./ReviewMistakes";
 
 // ---------------------------------------------------------------------------
 // Pages & navigation
 // ---------------------------------------------------------------------------
 
-type Page = 'about' | 'training' | 'review';
+type Page = 'about' | 'training' | 'review' | 'mistakes';
 
 type NavBarProps = {
   current: Page;
@@ -36,6 +37,12 @@ function NavBar({ current, onNavigate }: NavBarProps) {
       >
         Review game
       </button>
+      <button
+        className={current === 'mistakes' ? 'active' : ''}
+        onClick={() => onNavigate('mistakes')}
+      >
+        Review mistakes
+      </button>
     </nav>
   );
 }
@@ -47,10 +54,11 @@ export default function App() {
     <div id="app">
       <NavBar current={page} onNavigate={setPage} />
       <main>
-        <div id="canvas" className={page === 'training' ? 'training-layout' : page === 'review' ? 'review-layout' : ''}>
+        <div id="canvas" className={page === 'training' || page === 'mistakes' ? 'training-layout' : page === 'review' ? 'review-layout' : ''}>
           {page === 'about' && <AboutPage />}
           {page === 'training' && <OpeningTrainingPage />}
           {page === 'review' && <ReviewGamePage />}
+          {page === 'mistakes' && <ReviewMistakesPage />}
         </div>
       </main>
     </div>
