@@ -45,5 +45,22 @@ export function AboutPage() {
       Note one can also supply a lichess study URL and all the lines
       from the study will be loaded.
     </p>
+
+    <h2>Review game</h2>
+
+    <p>
+      A basic analysis board, with live evaluation from Stockfish 18.
+      I added it mostly to experiment with the Stockfish library,
+      the evaluation gauge, and the move list.
+    </p>
+
+    <h2>Review mistakes</h2>
+
+    <p>
+      Loads a PGN file with pre-computed analysis of the games and
+      gives a comprehensive view about the player blunders.
+      Click any entry to jump to the position and try to figure what
+      went wrong!
+    </p>
   </div>;
 }
