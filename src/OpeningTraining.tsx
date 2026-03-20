@@ -191,12 +191,8 @@ function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoa
         );
       })}
       <div className="game-toggles-actions">
-        <button className="icon-btn" onClick={onResetProgress} title="Reset progress">
-          <img src={`${import.meta.env.BASE_URL}svg/reset.svg`} alt="Reset progress" />
-        </button>
-        <button className="icon-btn" onClick={onLoadFromLichess} title="Load from Lichess study">
-          <img src={`${import.meta.env.BASE_URL}svg/search-internet.svg`} alt="Load from Lichess study" />
-        </button>
+        <button className="action-btn" onClick={onResetProgress}>Reset progress</button>
+        <button className="action-btn" onClick={onLoadFromLichess}>Load from Lichess</button>
       </div>
     </div>
   );
@@ -549,9 +545,7 @@ export function OpeningTrainingPage() {
           ref={containerRef}
         />
         <div id="shortcuts">
-          <button className="icon-btn" onClick={() => fetchLineRef.current()} title="Skip current line">
-            <img src={`${import.meta.env.BASE_URL}svg/next.svg`} alt="Skip current line" />
-          </button>
+          <button className="action-btn" onClick={() => fetchLineRef.current()}>Skip current line</button>
         </div>
       </div>
       <div id="info">
