@@ -74,6 +74,7 @@ main {
   display: inline-flex;
   justify-content: center;
   align-items: start;
+  gap: 20px;
   box-sizing: border-box;
   width: 1120px;
   border: 5px;
@@ -85,6 +86,13 @@ main {
 #canvas.training-layout {
   display: inline-grid;
   grid-template-columns: 1fr 400px 1fr;
+  column-gap: 20px;
+  align-items: start;
+}
+
+#canvas.review-layout {
+  display: inline-grid;
+  grid-template-columns: 1fr auto 1fr;
   column-gap: 20px;
   align-items: start;
 }
@@ -166,6 +174,41 @@ main {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+#review-info {
+  width: 200px;
+}
+
+.move-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 380px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.move-pair {
+  display: grid;
+  grid-template-columns: 28px 1fr 1fr;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.move-pair:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.move-number {
+  color: #888;
+  text-align: right;
+}
+
+.move-san {
+  color: #ddd;
+  padding-left: 4px;
 }
 
 #review-board-wrapper {
@@ -251,10 +294,15 @@ kbd {
     background-color: transparent;
   }
 
-  #canvas.training-layout {
+  #canvas.training-layout,
+  #canvas.review-layout {
     display: flex;
     flex-direction: column;
     width: 100%;
+  }
+
+  #canvas.review-layout > div:first-child {
+    display: none;
   }
 
   #board-column {
@@ -281,6 +329,16 @@ kbd {
 
   #shortcuts {
     padding: 8px 16px;
+  }
+
+  #review-info {
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .move-list {
+    max-height: 200px;
   }
 
   #review-board-wrapper {

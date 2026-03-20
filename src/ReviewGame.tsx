@@ -7,6 +7,7 @@ import { chessgroundDests } from 'chessops/compat';
 import { Chess } from "chessops/chess";
 import { parseSquare } from "chessops/util";
 import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
+import { makeSan } from "chessops/san";
 import { playSound, audioCapture, audioSelfMove } from "./sounds";
 import { EvalGauge, type EvalState } from "./EvalGauge";
 
@@ -21,6 +22,8 @@ export function ReviewGamePage() {
   const workerRef = useRef<Worker | null>(null);
   const analyzingForRef = useRef<'white' | 'black'>('white');
   const [evalState, setEvalState] = useState<EvalState>(null);
+  const [moves, setMoves] = useState<string[]>([]);
+  const moveListRef = useRef<HTMLDivElement | null>(null);
 
   function getValidMoves() {
     return chessgroundDests(chessLogicRef.current, { chess960: false });
@@ -66,7 +69,9 @@ export function ReviewGamePage() {
       (movingPiece?.role === 'pawn' && _to === chessLogicRef.current.epSquare)
     );
 
+    const san = makeSan(chessLogicRef.current, { from: _from, to: _to, promotion });
     chessLogicRef.current.play({ from: _from, to: _to, promotion });
+    setMoves(prev => [...prev, san]);
     updateUi();
     playSound(isCapture ? audioCapture : audioSelfMove);
     analyzePosition();
@@ -152,10 +157,35 @@ export function ReviewGamePage() {
     };
   }, []);
 
+  useEffect(() => {
+    moveListRef.current?.scrollTo({ top: moveListRef.current.scrollHeight, behavior: 'smooth' });
+  }, [moves]);
+
+  const movePairs = Array.from({ length: Math.ceil(moves.length / 2) }, (_, i) => ({
+    num: i + 1,
+    white: moves[i * 2],
+    black: moves[i * 2 + 1],
+  }));
+
   return (
-    <div id="review-board-wrapper">
-      <div id="contref" ref={containerRef} />
-      <EvalGauge eval={evalState} />
-    </div>
+    <>
+      <div /> {/* left spacer — mirrors the right column to keep the board centered */}
+      <div id="review-board-wrapper">
+        <div id="contref" ref={containerRef} />
+        <EvalGauge eval={evalState} />
+      </div>
+      <div id="review-info" className="side-panel">
+        <h3>Moves</h3>
+        <div className="move-list" ref={moveListRef}>
+          {movePairs.map(({ num, white, black }) => (
+            <div key={num} className="move-pair">
+              <span className="move-number">{num}.</span>
+              <span className="move-san">{white}</span>
+              <span className="move-san">{black ?? ''}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
