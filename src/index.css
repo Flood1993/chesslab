@@ -173,6 +173,48 @@ main {
   height: 32px;
 }
 
+#review-board-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.eval-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 16px;
+}
+
+.eval-gauge-bar {
+  flex: 1;
+  width: 100%;
+  background: #f0ede8; /* white portion background */
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.eval-gauge-black {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #302e2b;
+  transition: height 0.4s ease;
+}
+
+.eval-gauge-score {
+  font-size: 0.65rem;
+  color: #ccc;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
 .hint-square {
   background-color: rgba(255, 220, 0, 0.55) !important;
 }
@@ -244,5 +286,23 @@ kbd {
 
   #shortcuts {
     padding: 8px 16px;
+  }
+
+  #review-board-wrapper {
+    width: 100%;
+  }
+
+  #review-board-wrapper #contref {
+    flex: 1;
+    width: auto;
+    height: calc(100vw - 18px); /* board width = viewport minus gauge (12px) + gap (6px) */
+  }
+
+  .eval-gauge {
+    width: 12px;
+  }
+
+  .eval-gauge-score {
+    display: none;
   }
 }
