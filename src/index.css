@@ -84,7 +84,7 @@ main {
 
 #canvas.training-layout {
   display: inline-grid;
-  grid-template-columns: 220px 400px 400px;
+  grid-template-columns: 1fr 400px 1fr;
   column-gap: 20px;
   align-items: start;
 }
@@ -153,6 +153,7 @@ main {
 #board-column {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
 }
 
