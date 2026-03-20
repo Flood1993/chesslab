@@ -40,6 +40,10 @@ function checkBlunder(
   currentCp: number,
   playerIsWhite: boolean,
 ): boolean {
+  // If the player is still clearly winning after the move, it's not a blunder
+  if (playerIsWhite && currentCp >= 5) return false;
+  if (!playerIsWhite && currentCp <= -5) return false;
+
   const delta = currentCp - prevCp; // positive = eval rose (better for white)
   if (playerIsWhite) {
     const drop = -delta;
@@ -233,7 +237,7 @@ export function ReviewMistakesPage() {
               className={`blunder-item${selectedIndex === i ? ' selected' : ''}`}
               onClick={() => setSelectedIndex(i)}
             >
-              {b.white} vs {b.black} – #{b.moveNumber}. {b.evalBefore.display} → {b.evalAfter.display}
+              {b.white} vs {b.black} - {b.moveNumber}. {b.evalBefore.display} → {b.evalAfter.display}
             </div>
           ))}
         </div>
