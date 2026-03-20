@@ -7,6 +7,7 @@ import { chessgroundDests } from 'chessops/compat';
 import { Chess } from "chessops/chess";
 import { parseSquare } from "chessops/util";
 import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
+import { playSound, audioCapture, audioSelfMove } from "./sounds";
 
 export function ReviewGamePage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -40,8 +41,16 @@ export function ReviewGamePage() {
     const _to = parseSquare(chessopsTo);
     if (_to === undefined) return;
 
+    const destPiece = chessLogicRef.current.board.get(_to);
+    const isCastling = movingPiece?.role === 'king' && destPiece?.color === movingPiece?.color;
+    const isCapture = !isCastling && (
+      destPiece !== undefined ||
+      (movingPiece?.role === 'pawn' && _to === chessLogicRef.current.epSquare)
+    );
+
     chessLogicRef.current.play({ from: _from, to: _to, promotion });
     updateUi();
+    playSound(isCapture ? audioCapture : audioSelfMove);
   }
 
   function handleMove(orig: string, dest: string) {

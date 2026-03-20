@@ -10,17 +10,7 @@ import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessops/pgn";
 import { parseSan } from "chessops/san";
 import { Move } from "./basetypes";
-
-function playSound(audio: HTMLAudioElement) {
-  audio.currentTime = 0;
-  audio.play();
-}
-
-const audioCapture = new Audio(`${import.meta.env.BASE_URL}/sound/Capture.mp3`);
-const audioGameEnd = new Audio(`${import.meta.env.BASE_URL}/sound/Victory.mp3`);
-const audioGameStart = new Audio(`${import.meta.env.BASE_URL}/sound/GenericNotify.mp3`);
-const audioIllegalMove = new Audio(`${import.meta.env.BASE_URL}/sound/Error.mp3`);
-const audioSelfMove = new Audio(`${import.meta.env.BASE_URL}/sound/Move.mp3`);
+import { playSound, audioCapture, audioGameEnd, audioGameStart, audioIllegalMove, audioSelfMove } from "./sounds";
 
 // ---------------------------------------------------------------------------
 // Data types
