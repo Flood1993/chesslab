@@ -376,6 +376,14 @@ kbd {
     box-sizing: border-box;
   }
 
+  #mistakes-list {
+    order: 2;
+  }
+
+  #mistakes-details {
+    order: 3;
+  }
+
   .move-list,
   .blunder-scroll {
     max-height: 200px;
