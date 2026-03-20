@@ -10,6 +10,7 @@ import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessops/pgn";
 import { parseSan } from "chessops/san";
 import { AboutPage } from "./About";
+import { ReviewGamePage } from "./ReviewGame";
 import { Move } from "./basetypes";
 
 function playSound(audio: HTMLAudioElement) {
@@ -588,7 +589,7 @@ function OpeningTrainingPage() {
 // Pages & navigation
 // ---------------------------------------------------------------------------
 
-type Page = 'about' | 'training';
+type Page = 'about' | 'training' | 'review';
 
 type NavBarProps = {
   current: Page;
@@ -610,6 +611,12 @@ function NavBar({ current, onNavigate }: NavBarProps) {
       >
         Opening training
       </button>
+      <button
+        className={current === 'review' ? 'active' : ''}
+        onClick={() => onNavigate('review')}
+      >
+        Review game
+      </button>
     </nav>
   );
 }
@@ -624,6 +631,7 @@ export default function App() {
         <div id="canvas" className={page === 'training' ? 'training-layout' : ''}>
           {page === 'about' && <AboutPage />}
           {page === 'training' && <OpeningTrainingPage />}
+          {page === 'review' && <ReviewGamePage />}
         </div>
       </main>
     </div>
