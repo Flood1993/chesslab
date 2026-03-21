@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Chessground } from "@lichess-org/chessground";
-import { type Config } from "@lichess-org/chessground/config";
-
-import { chessgroundDests } from 'chessops/compat';
 import { Chess } from "chessops/chess";
 import { parseSquare, makeSquare } from "chessops/util";
 import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
@@ -11,6 +7,7 @@ import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessop
 import { parseSan } from "chessops/san";
 import { Move } from "./basetypes";
 import { playSound, audioCapture, audioGameEnd, audioGameStart, audioIllegalMove, audioSelfMove } from "./sounds";
+import { UiBoard, type UiBoardHandle, type UiBoardMoveResult } from "./UiBoard";
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -203,8 +200,7 @@ function GameToggles({ gameGroups, enabledGames, completedLines, onToggle, onLoa
 // ---------------------------------------------------------------------------
 
 export function OpeningTrainingPage() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const chessgroundRef = useRef<any>(null);
+  const boardRef = useRef<UiBoardHandle>(null);
 
   const initialSetup = parseFen(INITIAL_FEN).unwrap();
   const chessLogicRef = useRef(Chess.fromSetup(initialSetup).unwrap());
@@ -233,51 +229,21 @@ export function OpeningTrainingPage() {
   const currentLineKeyRef = useRef<string>('');
   const lineHasErrorRef = useRef<boolean>(false);
 
+  function playerColor(): 'white' | 'black' {
+    return isPlayerWhiteRef.current ? 'white' : 'black';
+  }
+
   function isCpuTurn(): boolean {
-    const curTurn: "black" | "white" = chessLogicRef.current.turn;
-    return (isPlayerWhiteRef.current && curTurn === "black") || (!isPlayerWhiteRef.current && curTurn === "white");
+    const curTurn = chessLogicRef.current.turn;
+    return (isPlayerWhiteRef.current && curTurn === 'black') || (!isPlayerWhiteRef.current && curTurn === 'white');
   }
 
-  function getValidMoves() {
-    return chessgroundDests(chessLogicRef.current, { chess960: false });
-  }
+  // Applies a move (from Move object) to chessLogicRef and syncs the board.
+  // Used for both player's correct moves and CPU moves.
+  function applyMoveToLogic(inputMove: Move): string {
+    const _from = parseSquare(inputMove.from)!;
 
-  function handleMove(orig: string, dest: string) {
-    if (isPromotion(orig, dest)) {
-      showPromotionDialog(orig, dest);
-      return;
-    }
-    playMove(new Move(orig, dest));
-  }
-
-  function playMove(inputMove: Move) {
-    console.log(`Move detected: ${inputMove.toString()}`);
-    setLastAttemptedMove(inputMove);
-    chessgroundRef.current.setAutoShapes([]);
-
-    const currentExpected = expectedNextMoveRef.current;
-    if (!inputMove.equals(currentExpected)) {
-      console.log(
-        `Played unexpected move ${inputMove.toString()} while ${currentExpected?.toString()} was expected, skipping...`
-      );
-      console.log("CANCELLING MOVE");
-      updateUi({});
-      lineHasErrorRef.current = true;
-      playSound(audioIllegalMove);
-      if (hintOnErrorsRef.current && currentExpected) {
-        chessgroundRef.current.set({ highlight: { custom: new Map([[currentExpected.from, 'hint-square']]) } });
-      }
-      return;
-    } else {
-      console.log(`Played expected move ${currentExpected?.toString()}.`);
-      chessgroundRef.current.set({ highlight: { custom: new Map() } });
-    }
-
-    const _from = parseSquare(inputMove.from);
-    if (_from === undefined) return;
-
-    // chessground sends king's final square for castling (e.g. g1/c1),
-    // but chessops expects king-captures-rook notation (h1/a1).
+    // Chessground uses king's landing square for castling; chessops needs king-captures-rook.
     let chessopsTo = inputMove.to;
     const movingPiece = chessLogicRef.current.board.get(_from);
     if (movingPiece?.role === 'king') {
@@ -286,9 +252,7 @@ export function OpeningTrainingPage() {
       else if (fileDiff === -2) chessopsTo = 'a' + inputMove.to[1];
     }
 
-    const _to = parseSquare(chessopsTo);
-    if (_to === undefined) return;
-
+    const _to = parseSquare(chessopsTo)!;
     const destPiece = chessLogicRef.current.board.get(_to);
     const isCastling = movingPiece?.role === 'king' && destPiece?.color === movingPiece?.color;
     const isCapture = !isCastling && (
@@ -297,16 +261,46 @@ export function OpeningTrainingPage() {
     );
 
     chessLogicRef.current.play({ from: _from, to: _to, promotion: inputMove.promotion });
-    updateUi({});
     playSound(isCapture ? audioCapture : audioSelfMove);
 
-    // Advance to next move
+    return makeFen(chessLogicRef.current.toSetup());
+  }
+
+  // Called by UiBoard when the player drags a piece.
+  function handleMove({ from, to, promotion }: UiBoardMoveResult) {
+    const inputMove = new Move(from, to, promotion as Move['promotion'] | undefined);
+    console.log(`Move detected: ${inputMove.toString()}`);
+    setLastAttemptedMove(inputMove);
+    boardRef.current?.setShapes([]);
+
+    const currentExpected = expectedNextMoveRef.current;
+    if (!inputMove.equals(currentExpected)) {
+      console.log(`Played unexpected move ${inputMove} while ${currentExpected} was expected — cancelling.`);
+      lineHasErrorRef.current = true;
+      playSound(audioIllegalMove);
+      // Reset board to the pre-move position.
+      const currentFen = makeFen(chessLogicRef.current.toSetup());
+      boardRef.current?.setPosition(currentFen, { movable: playerColor() });
+      if (hintOnErrorsRef.current && currentExpected) {
+        boardRef.current?.setShapes([{ orig: currentExpected.from, brush: 'yellow' }]);
+      }
+      return;
+    }
+
+    console.log(`Played expected move ${currentExpected?.toString()}.`);
+
+    const newFen = applyMoveToLogic(inputMove);
+    const movable = isCpuTurn() ? 'none' : playerColor();
+    boardRef.current?.setPosition(newFen, { movable });
+
+    advanceLine();
+  }
+
+  function advanceLine() {
     moveNoRef.current += 1;
     if (lineRef.current && moveNoRef.current < lineRef.current.length) {
       const nextMove = lineRef.current[moveNoRef.current];
-      const nextMoveInstance = new Move(nextMove.from, nextMove.to, nextMove.promotion);
-      console.log(`Setting next move to #${moveNoRef.current}: ${nextMoveInstance.toString()}`);
-      setExpectedNextMove(nextMoveInstance);
+      setExpectedNextMove(new Move(nextMove.from, nextMove.to, nextMove.promotion));
     } else {
       console.log("No more moves in line.");
       setExpectedNextMove(undefined);
@@ -319,52 +313,6 @@ export function OpeningTrainingPage() {
         try { localStorage.setItem('openingTrainer_completedLines', JSON.stringify([...next])); } catch {}
       }
     }
-  }
-
-  function isPromotion(orig: string, dest: string) {
-    const piece = chessLogicRef.current.board.get(parseSquare(orig) as any);
-    if (!piece || piece.role !== 'pawn') return false;
-    const rank = dest[1];
-    return (piece.color === 'white' && rank === '8') || (piece.color === 'black' && rank === '1');
-  }
-
-  function showPromotionDialog(orig: string, dest: string) {
-    const choice = prompt("Promote to (q, r, b, n)?");
-    if (!choice) return;
-
-    let result: "pawn" | "knight" | "bishop" | "rook" | "queen" | "king" | undefined;
-    switch(choice) {
-      case 'q': result = "queen"; break;
-      case 'r': result = "rook"; break;
-      case 'b': result = "bishop"; break;
-      case 'n': result = "knight"; break;
-      default:
-        console.log("Invalid promotion choice");
-        return;
-    }
-
-    playMove(new Move(orig, dest, result));
-  }
-
-  function updateUi({ reset, orientation }: { reset?: boolean, orientation?: "black" | "white" }) {
-    const current_fen = makeFen(chessLogicRef.current.toSetup());
-    const configDelta: Config = {
-      check: chessLogicRef.current.isCheck(),
-      fen: current_fen,
-      turnColor: chessLogicRef.current.turn,
-      movable: {
-        free: false,
-        dests: getValidMoves(),
-        events: {
-          after: handleMove
-        }
-      }
-    };
-
-    if (reset) configDelta.lastMove = undefined;
-    if (orientation) configDelta.orientation = orientation;
-
-    chessgroundRef.current.set(configDelta);
   }
 
   function handleNewLine(practiceLine: PracticeLine) {
@@ -381,16 +329,14 @@ export function OpeningTrainingPage() {
       setExpectedNextMove(new Move(moveInstances[0].from, moveInstances[0].to, moveInstances[0].promotion));
     }
 
-    updateUi({ reset: true, orientation: practiceLine.orientation });
-    chessgroundRef.current.set({ highlight: { custom: new Map() } });
+    const orientation = practiceLine.orientation;
+    boardRef.current?.setPosition(INITIAL_FEN, { orientation, movable: orientation });
 
     // Show a hint arrow for the player's first move when playing as white
     if (isPlayerWhiteRef.current && moveInstances.length > 0) {
-      chessgroundRef.current.setAutoShapes([
+      boardRef.current?.setShapes([
         { orig: moveInstances[0].from, dest: moveInstances[0].to, brush: 'green' }
       ]);
-    } else {
-      chessgroundRef.current.setAutoShapes([]);
     }
 
     playSound(audioGameStart);
@@ -462,7 +408,7 @@ export function OpeningTrainingPage() {
     const next = !hintOnErrorsRef.current;
     hintOnErrorsRef.current = next;
     setHintOnErrors(next);
-    if (!next) chessgroundRef.current.set({ highlight: { custom: new Map() } });
+    if (!next) boardRef.current?.setShapes([]);
   }
 
   function toggleGame(name: string) {
@@ -505,29 +451,28 @@ export function OpeningTrainingPage() {
     return () => controller.abort();
   }, []);
 
+  // CPU turn handler
   useEffect(() => {
     expectedNextMoveRef.current = expectedNextMove;
 
     if (!expectedNextMove || !isCpuTurn()) return;
 
-    // Disable moving pieces during the CPU turn
-    chessgroundRef.current.set({ movable: { free: false, dests: new Map() } });
+    // Disable moves during the CPU turn
+    const currentFen = makeFen(chessLogicRef.current.toSetup());
+    boardRef.current?.setPosition(currentFen, { movable: 'none' });
 
     const timeout = setTimeout(() => {
-      if (expectedNextMoveRef.current) {
-        playMove(expectedNextMoveRef.current);
-      }
-    }, 500); // CPU delay
+      const move = expectedNextMoveRef.current;
+      if (!move) return;
+
+      const newFen = applyMoveToLogic(move);
+      const movable = isCpuTurn() ? 'none' : playerColor();
+      boardRef.current?.setPosition(newFen, { movable });
+      advanceLine();
+    }, 500);
 
     return () => clearTimeout(timeout);
   }, [expectedNextMove]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    chessgroundRef.current = Chessground(containerRef.current, {});
-    updateUi({});
-    return () => chessgroundRef.current?.destroy?.();
-  }, []);
 
   return (
     <>
@@ -540,10 +485,7 @@ export function OpeningTrainingPage() {
         onResetProgress={resetProgress}
       />
       <div id="board-column">
-        <div
-          id="contref"
-          ref={containerRef}
-        />
+        <UiBoard ref={boardRef} onMove={handleMove} playSounds={false} />
         <div id="shortcuts">
           <button className="action-btn" onClick={() => fetchLineRef.current()}>Skip current line</button>
         </div>

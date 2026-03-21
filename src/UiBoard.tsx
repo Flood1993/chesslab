@@ -4,7 +4,7 @@ import { Chessground } from "@lichess-org/chessground";
 import type { Key } from "@lichess-org/chessground/types";
 import type { DrawShape } from "@lichess-org/chessground/draw";
 
-export type UiBoardShape = { orig: string; dest: string; brush: string };
+export type UiBoardShape = { orig: string; dest?: string; brush: string };
 
 import { chessgroundDests } from 'chessops/compat';
 import { Chess } from "chessops/chess";
@@ -19,6 +19,9 @@ import { playSound, audioCapture, audioSelfMove } from "./sounds";
 
 export type UiBoardMoveResult = {
   san: string;
+  from: string;
+  to: string;
+  promotion?: 'queen' | 'rook' | 'bishop' | 'knight';
   fen: string;
   turn: 'white' | 'black';
   isCapture: boolean;
@@ -41,13 +44,17 @@ export type UiBoardHandle = {
 
 type UiBoardProps = {
   onMove?: (result: UiBoardMoveResult) => void;
+  playSounds?: boolean;
 };
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard({ onMove }, ref) {
+export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
+  { onMove, playSounds = true },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cgRef = useRef<ReturnType<typeof Chessground> | null>(null);
   const chessRef = useRef<Chess>(Chess.fromSetup(parseFen(INITIAL_FEN).unwrap()).unwrap());
@@ -55,6 +62,8 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
   const movableRef = useRef<UiBoardSetPositionOpts['movable']>('none');
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
+  const playSoundsRef = useRef(playSounds);
+  playSoundsRef.current = playSounds;
 
   // ---------------------------------------------------------------------------
   // Internal move handler (registered as Chessground after-move callback)
@@ -124,7 +133,7 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
 
     const san = makeSan(chess, { from, to, promotion });
     chess.play({ from, to, promotion });
-    playSound(isCapture ? audioCapture : audioSelfMove);
+    if (playSoundsRef.current) playSound(isCapture ? audioCapture : audioSelfMove);
 
     const fen = makeFen(chess.toSetup());
     const turn = chess.turn;
@@ -152,7 +161,7 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
       });
     }
 
-    onMoveRef.current?.({ san, fen, turn, isCapture });
+    onMoveRef.current?.({ san, from: orig, to: dest, promotion, fen, turn, isCapture });
   }
 
   // ---------------------------------------------------------------------------
@@ -195,6 +204,7 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
         check: mc !== 'none' ? chess.isCheck() : false,
       });
       cgRef.current?.setAutoShapes([]);
+      cgRef.current?.set({ highlight: { custom: new Map() } });
     },
 
     setShapes(shapes) {
