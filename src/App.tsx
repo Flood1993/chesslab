@@ -55,7 +55,7 @@ function NavBar({ current, onNavigate }: NavBarProps) {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('training');
+  const [page, setPage] = useState<Page>('about');
 
   return (
     <div id="app">
