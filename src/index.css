@@ -391,6 +391,151 @@ kbd {
   min-width: 50px;
 }
 
+/* ---------------------------------------------------------------------------
+   Eval Battle
+   --------------------------------------------------------------------------- */
+
+#eval-battle-list {
+  overflow: hidden;
+}
+
+.eval-end-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #ccc;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.eval-end-btn:hover:not(:disabled) {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.eval-end-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.eval-battle-hint {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.color-select-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.color-btn {
+  flex: 1;
+  padding: 14px 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.color-btn:hover {
+  opacity: 0.85;
+}
+
+.color-btn-white {
+  background: #f0d9b5;
+  color: #333;
+}
+
+.color-btn-black {
+  background: #b58863;
+  color: #fff;
+}
+
+.eval-progress {
+  font-size: 0.85rem;
+  color: #ccc;
+  margin: 4px 0 0;
+}
+
+.eval-progress-bar-track {
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.eval-progress-bar-fill {
+  height: 100%;
+  background: #d5e500;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.eval-results {
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+.eval-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.eval-table th {
+  text-align: left;
+  color: #888;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-bottom: 1px solid #333;
+  position: sticky;
+  top: 0;
+  background: #2a2a2a;
+}
+
+.eval-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #222;
+  color: #ccc;
+}
+
+.eval-table tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.eval-table tr.active td {
+  background: rgba(213, 229, 0, 0.1);
+}
+
+.eval-move-num {
+  color: #666;
+  white-space: nowrap;
+}
+
+.eval-cell {
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.eval-game-san {
+  color: #2ecc71;
+}
+
+.eval-user-san {
+  color: #5b9bd5;
+}
+
 @media (max-width: 700px) {
   #root {
     text-align: left;
@@ -457,17 +602,21 @@ kbd {
 
   #review-info,
   #mistakes-list,
-  #mistakes-details {
+  #mistakes-details,
+  #eval-battle-list,
+  #eval-battle-panel {
     width: 100%;
     padding: 16px;
     box-sizing: border-box;
   }
 
-  #mistakes-list {
+  #mistakes-list,
+  #eval-battle-list {
     order: 2;
   }
 
-  #mistakes-details {
+  #mistakes-details,
+  #eval-battle-panel {
     order: 3;
   }
 

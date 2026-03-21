@@ -62,5 +62,12 @@ export function AboutPage() {
       Click any entry to jump to the position and try to figure what
       went wrong!
     </p>
+
+    <h2>Eval battle</h2>
+
+    <p>
+      Pick a game from the list, choose a color and see how your moves
+      compare to those played in the real game!
+    </p>
   </div>;
 }
