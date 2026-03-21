@@ -78,6 +78,8 @@ type Blunder = {
   isWhiteBlunder: boolean;
   evalBefore: Eval;
   evalAfter: Eval;
+  moves: string[];    // all SAN moves of the game
+  fens: string[];     // FEN after each move (index matches moves)
 };
 
 function extractBlunders(pgnText: string): Blunder[] {
@@ -102,6 +104,23 @@ function extractBlunders(pgnText: string): Blunder[] {
     const blackElo = game.headers.get('BlackElo') ?? '';
     const date = game.headers.get('Date') ?? '';
     let pos = startPosResult.value as Chess;
+
+    // Collect all SAN moves and FENs for this game
+    const allMoves: string[] = [];
+    const allFens: string[] = [];
+    {
+      const replayPos = startingPosition(game.headers).unwrap() as Chess;
+      let n: Node<PgnNodeData> = game.moves;
+      while (n.children.length > 0) {
+        const san = n.children[0].data.san;
+        const mv = parseSan(replayPos, san);
+        if (!mv) break;
+        replayPos.play(mv);
+        allMoves.push(san);
+        allFens.push(makeFen(replayPos.toSetup()));
+        n = n.children[0];
+      }
+    }
 
     let prevEval: Eval | null = { cp: 0, display: '0.00' };
 
@@ -149,6 +168,8 @@ function extractBlunders(pgnText: string): Blunder[] {
               isWhiteBlunder: playerIsWhite,
               evalBefore: prevEval,
               evalAfter: currentEval,
+              moves: allMoves,
+              fens: allFens,
             });
           }
         }
@@ -175,28 +196,35 @@ function extractBlunders(pgnText: string): Blunder[] {
 export function ReviewMistakesPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chessgroundRef = useRef<any>(null);
+  const moveListRef = useRef<HTMLDivElement | null>(null);
 
   const [blunders, setBlunders] = useState<Blunder[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [viewMoveIndex, setViewMoveIndex] = useState<number | null>(null);
 
   const selected = selectedIndex !== null ? blunders[selectedIndex] : null;
 
-  // Sync board and shapes whenever selection changes
+  // Sync board and shapes whenever selection or viewed move changes
   useEffect(() => {
     if (!chessgroundRef.current || selectedIndex === null || blunders.length === 0) return;
     const b = blunders[selectedIndex];
+    const fen = viewMoveIndex !== null ? b.fens[viewMoveIndex] : b.fenBefore;
     chessgroundRef.current.set({
-      fen: b.fenBefore,
+      fen,
       orientation: b.isWhiteBlunder ? 'white' : 'black',
       turnColor: undefined,
       movable: { free: true, color: 'both' },
       lastMove: undefined,
       check: false,
     });
-    chessgroundRef.current.setAutoShapes([
-      { orig: b.moveFrom, dest: b.moveTo, brush: 'red' },
-    ]);
-  }, [selectedIndex, blunders]);
+    if (viewMoveIndex === null) {
+      chessgroundRef.current.setAutoShapes([
+        { orig: b.moveFrom, dest: b.moveTo, brush: 'red' },
+      ]);
+    } else {
+      chessgroundRef.current.setAutoShapes([]);
+    }
+  }, [selectedIndex, viewMoveIndex, blunders]);
 
   // Init chessground
   useEffect(() => {
@@ -226,6 +254,29 @@ export function ReviewMistakesPage() {
       });
     return () => controller.abort();
   }, []);
+
+  // Reset viewed move and scroll to blunder move when selection changes
+  useEffect(() => {
+    setViewMoveIndex(null);
+    if (!moveListRef.current || !selected) return;
+    const blunderPairIndex = selected.moveNumber - 1;
+    const pairs = moveListRef.current.querySelectorAll('.move-pair');
+    pairs[blunderPairIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selectedIndex]);
+
+  const movePairs = selected
+    ? Array.from({ length: Math.ceil(selected.moves.length / 2) }, (_, i) => ({
+        num: i + 1,
+        white: selected.moves[i * 2],
+        black: selected.moves[i * 2 + 1],
+      }))
+    : [];
+
+  const blunderMoveIndex = selected
+    ? (selected.moveNumber - 1) * 2 + (selected.isWhiteBlunder ? 0 : 1)
+    : -1;
+
+  const activeMoveIndex = viewMoveIndex !== null ? viewMoveIndex : blunderMoveIndex;
 
   return (
     <>
@@ -301,6 +352,26 @@ export function ReviewMistakesPage() {
                 <span className="blunder-detail-label">Eval</span>
                 <span>{selected.evalBefore.display} → {selected.evalAfter.display}</span>
               </div>
+            </div>
+            <h3>Moves</h3>
+            <div className="move-list" ref={moveListRef}>
+              {movePairs.map(({ num, white, black }) => {
+                const whiteIdx = (num - 1) * 2;
+                const blackIdx = whiteIdx + 1;
+                return (
+                  <div key={num} className="move-pair">
+                    <span className="move-number">{num}.</span>
+                    <span
+                      className={`move-san move-clickable${whiteIdx === blunderMoveIndex ? ' move-blunder' : ''}${whiteIdx === activeMoveIndex ? ' move-active' : ''}`}
+                      onClick={() => setViewMoveIndex(whiteIdx)}
+                    >{white}</span>
+                    <span
+                      className={`move-san move-clickable${blackIdx === blunderMoveIndex ? ' move-blunder' : ''}${black !== undefined && blackIdx === activeMoveIndex ? ' move-active' : ''}`}
+                      onClick={() => black !== undefined && setViewMoveIndex(blackIdx)}
+                    >{black ?? ''}</span>
+                  </div>
+                );
+              })}
             </div>
           </>
         ) : (

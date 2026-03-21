@@ -211,6 +211,24 @@ main {
   padding-left: 4px;
 }
 
+.move-blunder {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.move-clickable {
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.move-clickable:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.move-active {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
 #review-board-wrapper {
   display: flex;
   flex-direction: row;
