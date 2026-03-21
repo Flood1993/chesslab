@@ -256,7 +256,7 @@ export function ReviewMistakesPage() {
 
     boardRef.current.setPosition(fen, {
       orientation: g.playerIsWhite ? 'white' : 'black',
-      movable: 'free',
+      movable: 'both',
     });
     boardRef.current.setShapes(shapes);
   }, [selectedIndex, viewMoveIndex, games]);
