@@ -255,6 +255,8 @@ export function EvalBattlePage() {
   // ---------------------------------------------------------------------------
 
   const PGN_FILES = [
+    '2013-anand-carlsen.pgn',
+    '2018-carlsen-caruana.pgn',
     'guimotron-road-to-2000.pgn'
   ];
 
