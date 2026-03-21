@@ -195,7 +195,6 @@ export function ReviewMistakesPage() {
     });
     chessgroundRef.current.setAutoShapes([
       { orig: b.moveFrom, dest: b.moveTo, brush: 'red' },
-      { orig: b.moveTo, brush: 'red', label: { text: '??' } },
     ]);
   }, [selectedIndex, blunders]);
 
