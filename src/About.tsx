@@ -8,40 +8,37 @@ export function AboutPage() {
       chess-related tools that crossed my mind at some point!
 
       Source code can be found in <a href="https://github.com/Flood1993/chesslab">Github</a>.
+    </p>
 
+    <ul>
+      <li>
+        <b>Opening training</b>:
+        Train opening lines by repetition!
+        By default it will load the ones I use, but it is also possible to
+        load them from a Lichess study.
+      </li>
+      <li>
+        <b>Review game</b>:
+        A basic analysis board, with live evaluation from Stockfish 18.
+        I added it mostly to experiment with the Stockfish library,
+        the evaluation gauge, and the move list.
+      </li>
+      <li>
+        <b>Review mistakes</b>:
+        Loads a PGN file with pre-computed analysis of the games and
+        gives a comprehensive view about the player blunders.
+        Click any entry to jump to the position and try to figure what
+        went wrong!
+      </li>
+      <li>
+        <b>Eval battle</b>:
+        Pick a game from the list, choose a color and see how your moves
+        compare to those played in the real game!
+      </li>
+    </ul>
+
+    <p>
       Please reach out to me with any feedback or suggestions you may have!
-    </p>
-
-    <h2>Opening training</h2>
-
-    <p>
-      Train opening lines by repetition!
-      By default it will load the ones I use, but it is also possible to
-      load them from a Lichess study.
-    </p>
-
-    <h2>Review game</h2>
-
-    <p>
-      A basic analysis board, with live evaluation from Stockfish 18.
-      I added it mostly to experiment with the Stockfish library,
-      the evaluation gauge, and the move list.
-    </p>
-
-    <h2>Review mistakes</h2>
-
-    <p>
-      Loads a PGN file with pre-computed analysis of the games and
-      gives a comprehensive view about the player blunders.
-      Click any entry to jump to the position and try to figure what
-      went wrong!
-    </p>
-
-    <h2>Eval battle</h2>
-
-    <p>
-      Pick a game from the list, choose a color and see how your moves
-      compare to those played in the real game!
     </p>
 
     <h1>About the author</h1>
