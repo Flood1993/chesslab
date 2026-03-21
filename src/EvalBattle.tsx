@@ -262,7 +262,9 @@ export function EvalBattlePage() {
   // PGN loading
   // ---------------------------------------------------------------------------
 
-  const PGN_FILES = ['guimotron-games.pgn'];
+  const PGN_FILES = [
+    'guimotron-road-to-2000.pgn'
+  ];
 
   useEffect(() => {
     const controller = new AbortController();

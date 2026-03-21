@@ -310,7 +310,7 @@ export function ReviewMistakesPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${import.meta.env.BASE_URL}chess/guimotron-games.pgn`, { signal: controller.signal })
+    fetch(`${import.meta.env.BASE_URL}chess/guimotron-road-to-2000.pgn`, { signal: controller.signal })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.text();
@@ -335,7 +335,6 @@ export function ReviewMistakesPage() {
           {games.length === 0 && (
             <p className="blunder-empty">
               No blundered games found.<br />
-              Make sure guimotron-games.pgn is in public/chess/.
             </p>
           )}
           {games.map((g, i) => (
