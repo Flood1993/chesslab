@@ -8,7 +8,7 @@ import { makeSquare } from "chessops/util";
 
 import { UiBoard, type UiBoardHandle, type UiBoardMoveResult } from "./UiBoard";
 
-const ENGINE_DEPTH = 20;
+const ENGINE_DEPTH = 18;
 
 // ---------------------------------------------------------------------------
 // Types
