@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { INITIAL_FEN } from "chessops/fen";
 
-import { playSound, audioCapture, audioSelfMove } from "./sounds";
 import { EvalGauge, type EvalState } from "./EvalGauge";
 import { UiBoard, type UiBoardHandle, type UiBoardMoveResult } from "./UiBoard";
 import { UiBoardMoves } from "./UiBoardMoves";
@@ -26,9 +25,8 @@ export function ReviewGamePage() {
     worker.postMessage(`go depth ${ENGINE_DEPTH}`);
   }
 
-  function handleMove({ san, isCapture }: UiBoardMoveResult) {
+  function handleMove({ san }: UiBoardMoveResult) {
     setMoves(prev => [...prev, san]);
-    playSound(isCapture ? audioCapture : audioSelfMove);
     analyzePosition();
   }
 

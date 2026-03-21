@@ -11,6 +11,7 @@ import { Chess } from "chessops/chess";
 import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { makeSan } from "chessops/san";
 import { parseSquare } from "chessops/util";
+import { playSound, audioCapture, audioSelfMove } from "./sounds";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,6 +124,7 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
 
     const san = makeSan(chess, { from, to, promotion });
     chess.play({ from, to, promotion });
+    playSound(isCapture ? audioCapture : audioSelfMove);
 
     const fen = makeFen(chess.toSetup());
     const turn = chess.turn;
