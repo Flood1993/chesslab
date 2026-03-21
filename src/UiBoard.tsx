@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { Chessground } from "@lichess-org/chessground";
 import type { Key } from "@lichess-org/chessground/types";
@@ -12,6 +12,9 @@ import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { makeSan } from "chessops/san";
 import { parseSquare } from "chessops/util";
 import { playSound, audioCapture, audioSelfMove } from "./sounds";
+import { EvalGauge, type EvalState } from "./EvalGauge";
+
+const EVAL_DEPTH = 18;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,6 +48,7 @@ export type UiBoardHandle = {
 type UiBoardProps = {
   onMove?: (result: UiBoardMoveResult) => void;
   playSounds?: boolean;
+  showEval?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -52,7 +56,7 @@ type UiBoardProps = {
 // ---------------------------------------------------------------------------
 
 export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
-  { onMove, playSounds = true },
+  { onMove, playSounds = true, showEval = false },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,6 +68,63 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
   onMoveRef.current = onMove;
   const playSoundsRef = useRef(playSounds);
   playSoundsRef.current = playSounds;
+
+  // Eval state — only used when showEval=true
+  const [evalState, setEvalState] = useState<EvalState>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const analyzingForRef = useRef<'white' | 'black'>('white');
+
+  // ---------------------------------------------------------------------------
+  // Eval: Stockfish worker
+  // ---------------------------------------------------------------------------
+
+  function analyzePosition() {
+    const worker = workerRef.current;
+    if (!worker) return;
+    const fen = makeFen(chessRef.current.toSetup());
+    analyzingForRef.current = chessRef.current.turn;
+    worker.postMessage('stop');
+    worker.postMessage(`position fen ${fen}`);
+    worker.postMessage(`go depth ${EVAL_DEPTH}`);
+  }
+
+  useEffect(() => {
+    if (!showEval) return;
+
+    const worker = new Worker(`${import.meta.env.BASE_URL}stockfish/stockfish-18-lite-single.js`);
+    workerRef.current = worker;
+
+    worker.onmessage = (e: MessageEvent<string>) => {
+      const line = e.data;
+      if (!line.startsWith('info') || !line.includes(' score ')) return;
+
+      const depthMatch = line.match(/\bdepth (\d+)/);
+      if (!depthMatch || parseInt(depthMatch[1]) < 1) return;
+
+      const mateMatch = line.match(/\bscore mate (-?\d+)/);
+      const cpMatch = line.match(/\bscore cp (-?\d+)/);
+      const turn = analyzingForRef.current;
+
+      if (mateMatch) {
+        const mateVal = parseInt(mateMatch[1]);
+        setEvalState({ type: 'mate', value: turn === 'white' ? mateVal : -mateVal });
+      } else if (cpMatch) {
+        const cp = parseInt(cpMatch[1]);
+        setEvalState({ type: 'cp', value: turn === 'white' ? cp : -cp });
+      }
+    };
+
+    worker.postMessage('uci');
+    worker.postMessage('setoption name MultiPV value 1');
+    worker.postMessage('isready');
+    analyzePosition();
+
+    return () => {
+      worker.postMessage('quit');
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, [showEval]);
 
   // ---------------------------------------------------------------------------
   // Internal move handler (registered as Chessground after-move callback)
@@ -161,6 +222,7 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
       });
     }
 
+    analyzePosition();
     onMoveRef.current?.({ san, from: orig, to: dest, promotion, fen, turn, isCapture });
   }
 
@@ -239,5 +301,20 @@ export const UiBoard = forwardRef<UiBoardHandle, UiBoardProps>(function UiBoard(
     return () => cgRef.current?.destroy?.();
   }, []);
 
-  return <div id="contref" ref={containerRef} />;
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  const boardDiv = <div id="contref" ref={containerRef} />;
+
+  if (showEval) {
+    return (
+      <>
+        {boardDiv}
+        <EvalGauge eval={evalState} />
+      </>
+    );
+  }
+
+  return boardDiv;
 });
