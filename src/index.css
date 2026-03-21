@@ -78,8 +78,10 @@ main {
   box-sizing: border-box;
   width: 1120px;
   border: 5px;
+  border-style: solid;
   border-radius: 10px;
-  background-color: rgb(92, 92, 92);
+  border-color: #3d444f;
+  background-color: #161612;
   padding: 30px;
 }
 
