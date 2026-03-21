@@ -7,7 +7,7 @@ import { parseSan } from "chessops/san";
 import { makeSquare } from "chessops/util";
 
 import { UiBoard, type UiBoardHandle } from "./UiBoard";
-import { UiBoardMoves } from "./UiBoardMoves";
+import { UiBoardMoves, type UiBoardMovesHandle, type MoveNode } from "./UiBoardMoves";
 
 const PLAYER_NAME = 'GuimotronEnYt';
 const BLUNDER_THRESHOLD = 3.0;
@@ -48,12 +48,10 @@ function checkBlunder(
   const delta = currentCp - prevCp; // positive = eval rose (better for white)
   if (playerIsWhite) {
     const drop = -delta;
-    // Already badly losing as white: only flag if the drop is very large
     const threshold = prevCp <= -3 ? BLUNDER_THRESHOLD_LOSING : BLUNDER_THRESHOLD;
     return drop >= threshold;
   } else {
-    const rise = delta; // positive = bad for black
-    // Already badly losing as black (white is far ahead): higher bar
+    const rise = delta;
     const threshold = prevCp >= 3 ? BLUNDER_THRESHOLD_LOSING : BLUNDER_THRESHOLD;
     return rise >= threshold;
   }
@@ -63,13 +61,20 @@ function checkBlunder(
 // Types
 // ---------------------------------------------------------------------------
 
+type AllMove = {
+  san: string;
+  fen: string;   // FEN after this move
+  from: string;  // origin square (algebraic)
+  to: string;    // visual destination square (algebraic)
+};
+
 type BlunderMove = {
-  moveIndex: number;  // 0-based index into the game's moves[] / fens[]
+  moveIndex: number;  // 0-based index into the game's moves[]
   moveNumber: number; // 1-based full move number
   moveSan: string;
-  moveFrom: string;   // algebraic origin square for the arrow
-  moveTo: string;     // algebraic destination square for the arrow (visual)
-  fenBefore: string;  // position before the blunder was played
+  moveFrom: string;
+  moveTo: string;
+  fenBefore: string;
   evalBefore: Eval;
   evalAfter: Eval;
 };
@@ -83,8 +88,8 @@ type BlunderedGame = {
   blackElo: string;
   date: string;
   playerIsWhite: boolean;
-  moves: string[];       // all SAN moves of the game
-  fens: string[];        // FEN after each move (index matches moves)
+  startFen: string;
+  moves: AllMove[];
   blunders: BlunderMove[];
 };
 
@@ -114,22 +119,41 @@ function extractBlunderedGames(pgnText: string): BlunderedGame[] {
     const blackElo = game.headers.get('BlackElo') ?? '';
     const date = game.headers.get('Date') ?? '';
 
-    // Collect all SAN moves and FENs (replay from start)
-    const allMoves: string[] = [];
-    const allFens: string[] = [];
+    // Collect all moves with FEN, from, to
+    const allMoves: AllMove[] = [];
     {
       const replayPos = startingPosition(game.headers).unwrap() as Chess;
       let n: Node<PgnNodeData> = game.moves;
       while (n.children.length > 0) {
         const san = n.children[0].data.san;
         const mv = parseSan(replayPos, san);
-        if (!mv) break;
+        if (!mv || !('from' in mv)) break;
+
+        // Convert castling king destination to visual square
+        let visualTo = mv.to;
+        const movingPiece = replayPos.board.get(mv.from);
+        if (movingPiece?.role === 'king') {
+          const fromFile = mv.from & 7;
+          const toFile = mv.to & 7;
+          if (Math.abs(fromFile - toFile) > 1) {
+            const rank = mv.from >> 3;
+            visualTo = rank * 8 + (toFile > fromFile ? fromFile + 2 : fromFile - 2);
+          }
+        }
+
         replayPos.play(mv);
-        allMoves.push(san);
-        allFens.push(makeFen(replayPos.toSetup()));
+        allMoves.push({
+          san,
+          fen: makeFen(replayPos.toSetup()),
+          from: makeSquare(mv.from),
+          to: makeSquare(visualTo),
+        });
         n = n.children[0];
       }
     }
+
+    // Compute start FEN
+    const startFen = makeFen((startPosResult.unwrap() as Chess).toSetup());
 
     // Detect blunders
     const blunders: BlunderMove[] = [];
@@ -197,8 +221,8 @@ function extractBlunderedGames(pgnText: string): BlunderedGame[] {
         blackElo,
         date,
         playerIsWhite,
+        startFen,
         moves: allMoves,
-        fens: allFens,
         blunders,
       });
     }
@@ -213,55 +237,77 @@ function extractBlunderedGames(pgnText: string): BlunderedGame[] {
 
 export function ReviewMistakesPage() {
   const boardRef = useRef<UiBoardHandle>(null);
+  const movesRef = useRef<UiBoardMovesHandle>(null);
 
   const [games, setGames] = useState<BlunderedGame[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [viewMoveIndex, setViewMoveIndex] = useState<number | null>(null);
+  const [activeBlunder, setActiveBlunder] = useState<BlunderMove | null>(null);
 
   const selected = selectedIndex !== null ? games[selectedIndex] : null;
 
-  // Find the BlunderMove for the currently viewed index (if any)
-  const activeBlunder = selected && viewMoveIndex !== null
-    ? selected.blunders.find(b => b.moveIndex === viewMoveIndex) ?? null
-    : null;
+  // ---------------------------------------------------------------------------
+  // Board sync via onNavigate
+  // ---------------------------------------------------------------------------
 
-  const activeMoveIndex = viewMoveIndex !== null
-    ? viewMoveIndex
-    : (selected ? selected.blunders[0].moveIndex : -1);
+  function handleNavigate(node: MoveNode | null, fen: string, parentFen: string) {
+    if (!boardRef.current || !selected) return;
+    const orientation = selected.playerIsWhite ? 'white' : 'black';
 
-  const blunderMoveIndices = new Set(selected?.blunders.map(b => b.moveIndex) ?? []);
-
-  // Sync board whenever selection or viewed move changes
-  useEffect(() => {
-    if (!boardRef.current || selectedIndex === null || games.length === 0) return;
-    const g = games[selectedIndex];
-
-    let fen: string;
-    let shapes: { orig: string; dest: string; brush: string }[] = [];
-
-    if (viewMoveIndex === null) {
-      const first = g.blunders[0];
-      fen = first.fenBefore;
-      shapes = [{ orig: first.moveFrom, dest: first.moveTo, brush: 'red' }];
-    } else {
-      const blunder = g.blunders.find(b => b.moveIndex === viewMoveIndex);
-      if (blunder) {
-        fen = blunder.fenBefore;
-        shapes = [{ orig: blunder.moveFrom, dest: blunder.moveTo, brush: 'red' }];
-      } else {
-        fen = g.fens[viewMoveIndex];
-        shapes = [];
-      }
+    if (node === null) {
+      // At root: show starting position
+      boardRef.current.setPosition(fen, { orientation, movable: 'none' });
+      boardRef.current.setShapes([]);
+      setActiveBlunder(null);
+      return;
     }
 
-    boardRef.current.setPosition(fen, {
-      orientation: g.playerIsWhite ? 'white' : 'black',
-      movable: 'both',
-    });
-    boardRef.current.setShapes(shapes);
-  }, [selectedIndex, viewMoveIndex, games]);
+    if (node.isBlunder) {
+      const blunder = selected.blunders.find(b => b.moveIndex === node.ply);
+      // Show the position BEFORE the blunder with a red arrow
+      boardRef.current.setPosition(parentFen, { orientation, movable: 'both' });
+      boardRef.current.setShapes(
+        blunder ? [{ orig: blunder.moveFrom, dest: blunder.moveTo, brush: 'red' }] : []
+      );
+      setActiveBlunder(blunder ?? null);
+    } else {
+      boardRef.current.setPosition(fen, {
+        orientation,
+        movable: 'both',
+        lastMove: [node.from, node.to] as [string, string],
+      });
+      boardRef.current.setShapes([]);
+      setActiveBlunder(null);
+    }
+  }
 
+  // ---------------------------------------------------------------------------
+  // Load game into move list when selection changes
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (selectedIndex === null || games.length === 0) return;
+    const g = games[selectedIndex];
+    setActiveBlunder(null);
+
+    const blunderIndices = new Set(g.blunders.map(b => b.moveIndex));
+
+    movesRef.current?.loadLine(
+      g.moves.map((m, i) => ({
+        san: m.san,
+        fen: m.fen,
+        from: m.from,
+        to: m.to,
+        isBlunder: blunderIndices.has(i),
+      })),
+      g.startFen,
+      g.blunders[0].moveIndex, // navigate to first blunder
+    );
+  }, [selectedIndex, games]);
+
+  // ---------------------------------------------------------------------------
   // Fetch and parse games PGN
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     const controller = new AbortController();
     fetch(`${import.meta.env.BASE_URL}chess/guimotron-games.pgn`, { signal: controller.signal })
@@ -279,11 +325,6 @@ export function ReviewMistakesPage() {
       });
     return () => controller.abort();
   }, []);
-
-  // Reset viewed move when selection changes
-  useEffect(() => {
-    setViewMoveIndex(null);
-  }, [selectedIndex]);
 
   return (
     <>
@@ -362,14 +403,7 @@ export function ReviewMistakesPage() {
               )}
             </div>
             <h3>Moves</h3>
-            <UiBoardMoves
-              boardRef={boardRef}
-              moves={selected.moves}
-              activeMoveIndex={activeMoveIndex}
-              highlightedIndices={blunderMoveIndices}
-              onMoveClick={setViewMoveIndex}
-              autoScrollTo="active"
-            />
+            <UiBoardMoves ref={movesRef} onNavigate={handleNavigate} />
           </>
         ) : (
           <p className="blunder-empty">Select a game from the list.</p>
