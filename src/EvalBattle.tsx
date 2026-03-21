@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Chessground } from "@lichess-org/chessground";
-
-import { chessgroundDests } from 'chessops/compat';
 import { Chess } from "chessops/chess";
 import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
 import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessops/pgn";
-import { parseSan, makeSan } from "chessops/san";
-import { makeSquare, parseSquare } from "chessops/util";
+import { parseSan } from "chessops/san";
+import { makeSquare } from "chessops/util";
+
+import { UiBoard, type UiBoardHandle, type UiBoardMoveResult } from "./UiBoard";
 
 const ENGINE_DEPTH = 15;
 const PLAYER_NAME = 'GuimotronEnYt';
@@ -158,46 +157,6 @@ function getResultFen(fenBefore: string, san: string): { fen: string; sideToMove
   return { fen: makeFen(pos.toSetup()), sideToMove: pos.turn };
 }
 
-function isPromotion(orig: string, dest: string, fenBefore: string): boolean {
-  const setup = parseFen(fenBefore);
-  if (!setup.isOk) return false;
-  const posResult = Chess.fromSetup(setup.unwrap());
-  if (!posResult.isOk) return false;
-  const pos = posResult.unwrap();
-  const from = parseSquare(orig);
-  if (from === undefined) return false;
-  const piece = pos.board.get(from);
-  if (!piece || piece.role !== 'pawn') return false;
-  const rank = dest[1];
-  return (piece.color === 'white' && rank === '8') || (piece.color === 'black' && rank === '1');
-}
-
-function getSanForMove(
-  fenBefore: string,
-  orig: string,
-  dest: string,
-  promotion?: 'queen' | 'rook' | 'bishop' | 'knight',
-): string | null {
-  const setup = parseFen(fenBefore);
-  if (!setup.isOk) return null;
-  const posResult = Chess.fromSetup(setup.unwrap());
-  if (!posResult.isOk) return null;
-  const pos = posResult.unwrap();
-  const from = parseSquare(orig);
-  if (from === undefined) return null;
-  // Chessground sends king's visual landing square for castling; chessops needs king-captures-rook
-  let chessDest = dest;
-  const piece = pos.board.get(from);
-  if (piece?.role === 'king') {
-    const fileDiff = dest.charCodeAt(0) - orig.charCodeAt(0);
-    if (fileDiff === 2) chessDest = 'h' + dest[1];
-    else if (fileDiff === -2) chessDest = 'a' + dest[1];
-  }
-  const to = parseSquare(chessDest);
-  if (to === undefined) return null;
-  return makeSan(pos, { from, to, promotion });
-}
-
 function formatEval(cpFromWhite: number | null): string {
   if (cpFromWhite === null) return '?';
   if (cpFromWhite >= 9999) return '+M';
@@ -206,17 +165,12 @@ function formatEval(cpFromWhite: number | null): string {
   return pawns >= 0 ? `+${pawns.toFixed(2)}` : pawns.toFixed(2);
 }
 
-const INITIAL_BOARD_FEN = makeFen(
-  Chess.fromSetup(parseFen(INITIAL_FEN).unwrap()).unwrap().toSetup()
-);
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function EvalBattlePage() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const chessgroundRef = useRef<any>(null);
+  const boardRef = useRef<UiBoardHandle>(null);
 
   const [games, setGames] = useState<GameEntry[]>([]);
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
@@ -228,7 +182,7 @@ export function EvalBattlePage() {
   const [results, setResults] = useState<ResultRow[]>([]);
   const [viewRowIdx, setViewRowIdx] = useState<number | null>(null);
 
-  // Stable refs for use inside Chessground callbacks
+  // Stable refs for use inside move callbacks
   const positionsRef = useRef<Position[]>([]);
   const playerColorRef = useRef<'white' | 'black' | null>(null);
   const currentPosIdxRef = useRef(0);
@@ -324,46 +278,20 @@ export function EvalBattlePage() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Chessground init
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    chessgroundRef.current = Chessground(containerRef.current, {
-      fen: INITIAL_BOARD_FEN,
-      movable: { free: false, color: undefined },
-    });
-    return () => chessgroundRef.current?.destroy?.();
-  }, []);
-
-  // ---------------------------------------------------------------------------
   // Board sync — playing phase
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (phase !== 'playing' || !chessgroundRef.current) return;
+    if (phase !== 'playing' || !boardRef.current) return;
     const positions = positionsRef.current;
     if (currentPosIdx >= positions.length) return;
     const pos = positions[currentPosIdx];
     const color = playerColorRef.current!;
 
-    const chessPos = Chess.fromSetup(parseFen(pos.fenBefore).unwrap()).unwrap();
-    const dests = chessgroundDests(chessPos);
-
-    chessgroundRef.current.set({
-      fen: pos.fenBefore,
+    boardRef.current.setPosition(pos.fenBefore, {
       orientation: color,
-      turnColor: color,
-      movable: {
-        color,
-        free: false,
-        dests,
-        events: { after: handleUserMove },
-      },
-      lastMove: undefined,
-      check: chessPos.isCheck(),
+      movable: color,
     });
-    chessgroundRef.current.setAutoShapes([]);
   }, [phase, currentPosIdx]);
 
   // ---------------------------------------------------------------------------
@@ -371,56 +299,30 @@ export function EvalBattlePage() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (phase !== 'results' || viewRowIdx === null || !chessgroundRef.current) return;
+    if (phase !== 'results' || viewRowIdx === null || !boardRef.current) return;
     const row = results[viewRowIdx];
-    chessgroundRef.current.set({
-      fen: row.fenBefore,
+
+    boardRef.current.setPosition(row.fenBefore, {
       orientation: playerColorRef.current ?? 'white',
-      turnColor: undefined,
-      movable: { color: undefined, free: false },
-      lastMove: undefined,
-      check: false,
+      movable: 'none',
     });
+
     const shapes = [];
     if (row.gameMoveFrom && row.gameMoveTo)
       shapes.push({ orig: row.gameMoveFrom, dest: row.gameMoveTo, brush: 'green' });
     if (row.userMoveFrom && row.userMoveTo)
       shapes.push({ orig: row.userMoveFrom, dest: row.userMoveTo, brush: 'blue' });
-    chessgroundRef.current.setAutoShapes(shapes);
+    boardRef.current.setShapes(shapes);
   }, [phase, viewRowIdx, results]);
 
   // ---------------------------------------------------------------------------
   // Playing logic
   // ---------------------------------------------------------------------------
 
-  function handleUserMove(orig: string, dest: string) {
-    const positions = positionsRef.current;
+  function handleUserMove({ san }: UiBoardMoveResult) {
     const idx = currentPosIdxRef.current;
+    const positions = positionsRef.current;
     if (idx >= positions.length) return;
-    const pos = positions[idx];
-
-    let promotion: 'queen' | 'rook' | 'bishop' | 'knight' | undefined;
-    if (isPromotion(orig, dest, pos.fenBefore)) {
-      const choice = prompt('Promote to (q, r, b, n)?');
-      switch (choice) {
-        case 'q': promotion = 'queen'; break;
-        case 'r': promotion = 'rook'; break;
-        case 'b': promotion = 'bishop'; break;
-        case 'n': promotion = 'knight'; break;
-        default: {
-          // Undo visual move — reset board to current position
-          const chessPos = Chess.fromSetup(parseFen(pos.fenBefore).unwrap()).unwrap();
-          chessgroundRef.current.set({
-            fen: pos.fenBefore,
-            movable: { dests: chessgroundDests(chessPos), events: { after: handleUserMove } },
-          });
-          return;
-        }
-      }
-    }
-
-    const san = getSanForMove(pos.fenBefore, orig, dest, promotion);
-    if (!san) return;
 
     userMovesRef.current.push(san);
     const nextIdx = idx + 1;
@@ -451,7 +353,6 @@ export function EvalBattlePage() {
       gameEvalCp: null,
       userEvalCp: null,
     }));
-    // Set actual user moves
     userMoves.forEach((san, i) => { rows[i].userSan = san; });
 
     let done = 0;
@@ -490,7 +391,6 @@ export function EvalBattlePage() {
             rows[i].gameEvalCp = cp;
             onOneDone();
             if (sameMove) {
-              // Reuse game eval — no need to run Stockfish again
               rows[i].userEvalCp = cp;
               onOneDone();
             } else {
@@ -519,7 +419,6 @@ export function EvalBattlePage() {
   // ---------------------------------------------------------------------------
 
   function handleGameSelect(idx: number) {
-    // Abort any in-progress evaluation
     evalQueueRef.current = [];
     evalRunningRef.current = false;
     currentJobRef.current = null;
@@ -531,13 +430,7 @@ export function EvalBattlePage() {
     setViewRowIdx(null);
     userMovesRef.current = [];
 
-    chessgroundRef.current?.set({
-      fen: INITIAL_BOARD_FEN,
-      orientation: 'white',
-      turnColor: undefined,
-      movable: { color: undefined, free: false },
-    });
-    chessgroundRef.current?.setAutoShapes([]);
+    boardRef.current?.setPosition(INITIAL_FEN, { movable: 'none' });
   }
 
   function handleColorSelect(color: 'white' | 'black') {
@@ -729,7 +622,7 @@ export function EvalBattlePage() {
 
       {/* Center column — board */}
       <div id="board-column">
-        <div id="contref" ref={containerRef} />
+        <UiBoard ref={boardRef} onMove={handleUserMove} />
       </div>
 
       {/* Right column — panel */}

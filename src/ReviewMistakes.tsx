@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Chessground } from "@lichess-org/chessground";
-
 import { Chess } from "chessops/chess";
-import { parseFen, makeFen, INITIAL_FEN } from "chessops/fen";
+import { makeFen } from "chessops/fen";
 import { parsePgn, startingPosition, type Node, type PgnNodeData } from "chessops/pgn";
 import { parseSan } from "chessops/san";
 import { makeSquare } from "chessops/util";
+
+import { UiBoard, type UiBoardHandle } from "./UiBoard";
+import { UiBoardMoves } from "./UiBoardMoves";
 
 const PLAYER_NAME = 'GuimotronEnYt';
 const BLUNDER_THRESHOLD = 3.0;
@@ -211,9 +212,7 @@ function extractBlunderedGames(pgnText: string): BlunderedGame[] {
 // ---------------------------------------------------------------------------
 
 export function ReviewMistakesPage() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const chessgroundRef = useRef<any>(null);
-  const moveListRef = useRef<HTMLDivElement | null>(null);
+  const boardRef = useRef<UiBoardHandle>(null);
 
   const [games, setGames] = useState<BlunderedGame[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -226,16 +225,21 @@ export function ReviewMistakesPage() {
     ? selected.blunders.find(b => b.moveIndex === viewMoveIndex) ?? null
     : null;
 
+  const activeMoveIndex = viewMoveIndex !== null
+    ? viewMoveIndex
+    : (selected ? selected.blunders[0].moveIndex : -1);
+
+  const blunderMoveIndices = new Set(selected?.blunders.map(b => b.moveIndex) ?? []);
+
   // Sync board whenever selection or viewed move changes
   useEffect(() => {
-    if (!chessgroundRef.current || selectedIndex === null || games.length === 0) return;
+    if (!boardRef.current || selectedIndex === null || games.length === 0) return;
     const g = games[selectedIndex];
 
     let fen: string;
     let shapes: { orig: string; dest: string; brush: string }[] = [];
 
     if (viewMoveIndex === null) {
-      // Default: show first blunder
       const first = g.blunders[0];
       fen = first.fenBefore;
       shapes = [{ orig: first.moveFrom, dest: first.moveTo, brush: 'red' }];
@@ -250,26 +254,12 @@ export function ReviewMistakesPage() {
       }
     }
 
-    chessgroundRef.current.set({
-      fen,
+    boardRef.current.setPosition(fen, {
       orientation: g.playerIsWhite ? 'white' : 'black',
-      turnColor: undefined,
-      movable: { free: true, color: 'both' },
-      lastMove: undefined,
-      check: false,
+      movable: 'free',
     });
-    chessgroundRef.current.setAutoShapes(shapes);
+    boardRef.current.setShapes(shapes);
   }, [selectedIndex, viewMoveIndex, games]);
-
-  // Init chessground
-  useEffect(() => {
-    if (!containerRef.current) return;
-    chessgroundRef.current = Chessground(containerRef.current, {
-      fen: makeFen(Chess.fromSetup(parseFen(INITIAL_FEN).unwrap()).unwrap().toSetup()),
-      movable: { free: true, color: 'both' },
-    });
-    return () => chessgroundRef.current?.destroy?.();
-  }, []);
 
   // Fetch and parse games PGN
   useEffect(() => {
@@ -290,32 +280,10 @@ export function ReviewMistakesPage() {
     return () => controller.abort();
   }, []);
 
-  // Reset viewed move and scroll to first blunder when selection changes
+  // Reset viewed move when selection changes
   useEffect(() => {
     setViewMoveIndex(null);
-    if (!moveListRef.current || !selected) return;
-    const firstBlunderPairIndex = selected.blunders[0].moveNumber - 1;
-    const pairs = moveListRef.current.querySelectorAll('.move-pair');
-    pairs[firstBlunderPairIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [selectedIndex]);
-
-  const movePairs = selected
-    ? Array.from({ length: Math.ceil(selected.moves.length / 2) }, (_, i) => ({
-        num: i + 1,
-        white: selected.moves[i * 2],
-        black: selected.moves[i * 2 + 1],
-      }))
-    : [];
-
-  const blunderMoveIndices = new Set(selected?.blunders.map(b => b.moveIndex) ?? []);
-
-  const activeMoveIndex = viewMoveIndex !== null
-    ? viewMoveIndex
-    : (selected ? selected.blunders[0].moveIndex : -1);
-
-  function handleMoveClick(idx: number) {
-    setViewMoveIndex(idx);
-  }
 
   return (
     <>
@@ -349,7 +317,7 @@ export function ReviewMistakesPage() {
 
       {/* Center column — board */}
       <div id="board-column">
-        <div id="contref" ref={containerRef} />
+        <UiBoard ref={boardRef} />
       </div>
 
       {/* Right column — details + move list */}
@@ -394,25 +362,14 @@ export function ReviewMistakesPage() {
               )}
             </div>
             <h3>Moves</h3>
-            <div className="move-list" ref={moveListRef}>
-              {movePairs.map(({ num, white, black }) => {
-                const whiteIdx = (num - 1) * 2;
-                const blackIdx = whiteIdx + 1;
-                return (
-                  <div key={num} className="move-pair">
-                    <span className="move-number">{num}.</span>
-                    <span
-                      className={`move-san move-clickable${blunderMoveIndices.has(whiteIdx) ? ' move-blunder' : ''}${whiteIdx === activeMoveIndex ? ' move-active' : ''}`}
-                      onClick={() => handleMoveClick(whiteIdx)}
-                    >{white}</span>
-                    <span
-                      className={`move-san move-clickable${blunderMoveIndices.has(blackIdx) ? ' move-blunder' : ''}${black !== undefined && blackIdx === activeMoveIndex ? ' move-active' : ''}`}
-                      onClick={() => black !== undefined && handleMoveClick(blackIdx)}
-                    >{black ?? ''}</span>
-                  </div>
-                );
-              })}
-            </div>
+            <UiBoardMoves
+              boardRef={boardRef}
+              moves={selected.moves}
+              activeMoveIndex={activeMoveIndex}
+              highlightedIndices={blunderMoveIndices}
+              onMoveClick={setViewMoveIndex}
+              autoScrollTo="active"
+            />
           </>
         ) : (
           <p className="blunder-empty">Select a game from the list.</p>
