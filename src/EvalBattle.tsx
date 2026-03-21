@@ -9,7 +9,6 @@ import { makeSquare } from "chessops/util";
 import { UiBoard, type UiBoardHandle, type UiBoardMoveResult } from "./UiBoard";
 
 const ENGINE_DEPTH = 15;
-const PLAYER_NAME = 'GuimotronEnYt';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,15 +64,8 @@ function parseGames(pgnText: string, sourceFile: string): GameEntry[] {
   const result: GameEntry[] = [];
 
   for (const game of games) {
-    const event = game.headers.get('Event') ?? '';
-    if (event.toLowerCase() !== 'rated rapid game') continue;
-
     const white = game.headers.get('White') ?? '';
     const black = game.headers.get('Black') ?? '';
-    const isPlayerGame =
-      white.toLowerCase() === PLAYER_NAME.toLowerCase() ||
-      black.toLowerCase() === PLAYER_NAME.toLowerCase();
-    if (!isPlayerGame) continue;
 
     const startPosResult = startingPosition(game.headers);
     if (!startPosResult.isOk) continue;
