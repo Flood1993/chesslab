@@ -637,8 +637,11 @@ export function EvalBattlePage() {
               <tbody>
                 {results.map((row, i) => {
                   const sameMove = row.userSan === row.gameSan;
-                  const delta = !sameMove && row.userEvalCp !== null && row.gameEvalCp !== null
+                  const rawDelta = !sameMove && row.userEvalCp !== null && row.gameEvalCp !== null
                     ? row.userEvalCp - row.gameEvalCp
+                    : null;
+                  const delta = rawDelta !== null
+                    ? rawDelta * (playerColorRef.current === 'black' ? -1 : 1)
                     : null;
                   return (
                     <tr
