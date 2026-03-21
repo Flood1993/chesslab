@@ -1,0 +1,78 @@
+/* Piece set: Merida */
+.cg-wrap piece.pawn.white   { background-image: url('/chesslab/piece/merida/wP.svg'); }
+.cg-wrap piece.knight.white { background-image: url('/chesslab/piece/merida/wN.svg'); }
+.cg-wrap piece.bishop.white { background-image: url('/chesslab/piece/merida/wB.svg'); }
+.cg-wrap piece.rook.white   { background-image: url('/chesslab/piece/merida/wR.svg'); }
+.cg-wrap piece.queen.white  { background-image: url('/chesslab/piece/merida/wQ.svg'); }
+.cg-wrap piece.king.white   { background-image: url('/chesslab/piece/merida/wK.svg'); }
+.cg-wrap piece.pawn.black   { background-image: url('/chesslab/piece/merida/bP.svg'); }
+.cg-wrap piece.knight.black { background-image: url('/chesslab/piece/merida/bN.svg'); }
+.cg-wrap piece.bishop.black { background-image: url('/chesslab/piece/merida/bB.svg'); }
+.cg-wrap piece.rook.black   { background-image: url('/chesslab/piece/merida/bR.svg'); }
+.cg-wrap piece.queen.black  { background-image: url('/chesslab/piece/merida/bQ.svg'); }
+.cg-wrap piece.king.black   { background-image: url('/chesslab/piece/merida/bK.svg'); }
+
+/* Board: blue */
+cg-board {
+  background-image: url('/chesslab/images/board/blue.png');
+  background-size: cover;
+}
+
+/** Interactive board square colors */
+cg-board square.move-dest {
+  background: radial-gradient(rgba(20, 85, 30, 0.5) 22%, #208530 0, rgba(0, 0, 0, 0.3) 0, rgba(0, 0, 0, 0) 0);
+}
+cg-board square.premove-dest {
+  background: radial-gradient(rgba(20, 30, 85, 0.5) 22%, #203085 0, rgba(0, 0, 0, 0.3) 0, rgba(0, 0, 0, 0) 0);
+}
+cg-board square.oc.move-dest {
+  background: radial-gradient(transparent 0%, transparent 80%, rgba(20, 85, 0, 0.3) 80%);
+}
+cg-board square.oc.premove-dest {
+  background: radial-gradient(transparent 0%, transparent 80%, rgba(20, 30, 85, 0.2) 80%);
+}
+cg-board square.move-dest:hover,
+cg-board square.move-dest.hover {
+  background: rgba(20, 85, 30, 0.3);
+}
+cg-board square.premove-dest:hover,
+cg-board square.premove-dest.hover {
+  background: rgba(20, 30, 85, 0.2);
+}
+cg-board square.last-move {
+  background-color: rgba(155, 199, 0, 0.41);
+}
+cg-board square.selected {
+  background-color: rgba(20, 85, 30, 0.5);
+}
+cg-board square.check {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 0, 0, 1) 0%,
+    rgba(231, 0, 0, 1) 25%,
+    rgba(169, 0, 0, 0) 89%,
+    rgba(158, 0, 0, 0) 100%
+  );
+}
+cg-board square.current-premove {
+  background-color: rgba(20, 30, 85, 0.5);
+}
+
+/** Alternating colors in rank/file/square labels */
+.orientation-white .ranks :nth-child(odd),
+.orientation-white .files :nth-child(even),
+.orientation-black .ranks :nth-child(even),
+.orientation-black .files :nth-child(odd),
+coords.squares:nth-of-type(odd) :nth-child(even),
+coords.squares:nth-of-type(even) :nth-child(odd) {
+  color: rgba(72, 72, 72, 0.8);
+}
+
+.orientation-white .ranks :nth-child(even),
+.orientation-white .files :nth-child(odd),
+.orientation-black .ranks :nth-child(odd),
+.orientation-black .files :nth-child(even),
+coords.squares:nth-of-type(odd) :nth-child(odd),
+coords.squares:nth-of-type(even) :nth-child(even) {
+  color: rgba(255, 255, 255, 0.8);
+}
