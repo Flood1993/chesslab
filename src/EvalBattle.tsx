@@ -161,11 +161,17 @@ function formatEval(cpFromWhite: number | null): string {
 // Component
 // ---------------------------------------------------------------------------
 
+const PGN_FILES = [
+  '2013-anand-carlsen.pgn',
+  '2018-carlsen-caruana.pgn',
+  'guimotron-road-to-2000.pgn'
+];
+
 export function EvalBattlePage() {
   const boardRef = useRef<UiBoardHandle>(null);
 
   const [games, setGames] = useState<GameEntry[]>([]);
-  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set(PGN_FILES));
   const [selectedGameIdx, setSelectedGameIdx] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [currentPosIdx, setCurrentPosIdx] = useState(0);
@@ -253,12 +259,6 @@ export function EvalBattlePage() {
   // ---------------------------------------------------------------------------
   // PGN loading
   // ---------------------------------------------------------------------------
-
-  const PGN_FILES = [
-    '2013-anand-carlsen.pgn',
-    '2018-carlsen-caruana.pgn',
-    'guimotron-road-to-2000.pgn'
-  ];
 
   useEffect(() => {
     const controller = new AbortController();
