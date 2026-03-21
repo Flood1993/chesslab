@@ -606,7 +606,7 @@ export function EvalBattlePage() {
                       {g.white} vs {g.black}
                     </div>
                     <div className="blunder-item-meta">
-                      {g.date} · {g.result === '1-0' ? '⚪' : g.result === '0-1' ? '⚫' : '↔️'}
+                      {g.date} · {g.result === '1-0' ? '⚪' : g.result === '0-1' ? '⚫' : '↔️'} · ({Math.floor((g.moves.length + 1) / 2)} moves)
                     </div>
                   </div>
                 ))}
