@@ -337,6 +337,31 @@ main {
   color: #aaa;
 }
 
+.pgn-file-group {
+  margin-bottom: 4px;
+}
+
+.pgn-file-header {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #999;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pgn-file-header:hover {
+  color: #ccc;
+}
+
+.pgn-file-chevron {
+  font-size: 0.65rem;
+  color: #666;
+}
+
 .blunder-empty {
   color: #888;
   font-size: 0.85rem;

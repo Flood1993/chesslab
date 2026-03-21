@@ -26,6 +26,7 @@ type GameEntry = {
   moves: string[];
   fens: string[];     // FEN after each move (index i = position after move i)
   startFen: string;   // FEN before move 0
+  sourceFile: string;
 };
 
 type Position = {
@@ -60,7 +61,7 @@ type Phase = 'idle' | 'color-select' | 'playing' | 'evaluating' | 'results';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseGames(pgnText: string): GameEntry[] {
+function parseGames(pgnText: string, sourceFile: string): GameEntry[] {
   const games = parsePgn(pgnText);
   const result: GameEntry[] = [];
 
@@ -105,6 +106,7 @@ function parseGames(pgnText: string): GameEntry[] {
       moves: allMoves,
       fens: allFens,
       startFen,
+      sourceFile,
     });
   }
 
@@ -217,6 +219,7 @@ export function EvalBattlePage() {
   const chessgroundRef = useRef<any>(null);
 
   const [games, setGames] = useState<GameEntry[]>([]);
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
   const [selectedGameIdx, setSelectedGameIdx] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [currentPosIdx, setCurrentPosIdx] = useState(0);
@@ -305,17 +308,18 @@ export function EvalBattlePage() {
   // PGN loading
   // ---------------------------------------------------------------------------
 
+  const PGN_FILES = ['guimotron-games.pgn'];
+
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${import.meta.env.BASE_URL}chess/guimotron-games.pgn`, { signal: controller.signal })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.text();
-      })
-      .then(text => setGames(parseGames(text)))
-      .catch(err => {
-        if (err.name !== 'AbortError') console.error('Error loading games PGN:', err);
-      });
+    Promise.all(
+      PGN_FILES.map(file =>
+        fetch(`${import.meta.env.BASE_URL}chess/${file}`, { signal: controller.signal })
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
+          .then(text => parseGames(text, file))
+          .catch(err => { if (err.name !== 'AbortError') console.error(`Error loading ${file}:`, err); return [] as GameEntry[]; })
+      )
+    ).then(results => setGames(results.flat()));
     return () => controller.abort();
   }, []);
 
@@ -683,23 +687,43 @@ export function EvalBattlePage() {
           {games.length === 0 && (
             <p className="blunder-empty">
               No games found.<br />
-              Make sure guimotron-games.pgn is in public/chess/.
+              Make sure PGN files are in public/chess/.
             </p>
           )}
-          {games.map((g, i) => (
-            <div
-              key={i}
-              className={`blunder-item${selectedGameIdx === i ? ' selected' : ''}`}
-              onClick={() => handleGameSelect(i)}
-            >
-              <div className="blunder-item-players">
-                {g.white} vs {g.black}
+          {PGN_FILES.map(file => {
+            const fileGames = games.map((g, i) => ({ g, i })).filter(({ g }) => g.sourceFile === file);
+            if (fileGames.length === 0) return null;
+            const collapsed = collapsedFiles.has(file);
+            return (
+              <div key={file} className="pgn-file-group">
+                <div
+                  className="pgn-file-header"
+                  onClick={() => setCollapsedFiles(prev => {
+                    const next = new Set(prev);
+                    if (next.has(file)) next.delete(file); else next.add(file);
+                    return next;
+                  })}
+                >
+                  <span className="pgn-file-chevron">{collapsed ? '▶' : '▼'}</span>
+                  {file} ({fileGames.length})
+                </div>
+                {!collapsed && fileGames.map(({ g, i }) => (
+                  <div
+                    key={i}
+                    className={`blunder-item${selectedGameIdx === i ? ' selected' : ''}`}
+                    onClick={() => handleGameSelect(i)}
+                  >
+                    <div className="blunder-item-players">
+                      {g.white} vs {g.black}
+                    </div>
+                    <div className="blunder-item-meta">
+                      {g.date} · {g.result === '1-0' ? '⚪' : g.result === '0-1' ? '⚫' : '↔️'}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="blunder-item-meta">
-                {g.date} · {g.result === '1-0' ? '⚪' : g.result === '0-1' ? '⚫' : '↔️'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
