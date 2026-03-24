@@ -28,9 +28,7 @@ export function EvalGauge({ eval: ev }: { eval: EvalState }) {
 
   return (
     <div className="eval-gauge">
-      <div className="eval-gauge-bar">
-        <div className="eval-gauge-black" style={{ height: `${100 - whitePercent}%` }} />
-      </div>
+      <div className="eval-gauge-black" style={{ width: `${100 - whitePercent}%` }} />
       <span className="eval-gauge-score">{label}</span>
     </div>
   );
