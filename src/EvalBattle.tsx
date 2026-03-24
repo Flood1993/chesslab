@@ -31,6 +31,7 @@ type Position = {
   moveIndex: number;  // 0-based index into game.moves
   fenBefore: string;
   gameSan: string;
+  lastMove?: [string, string]; // opponent's move that led to fenBefore
 };
 
 type EvalJob = {
@@ -110,7 +111,13 @@ function getPositions(game: GameEntry, color: 'white' | 'black'): Position[] {
     const isWhiteMove = i % 2 === 0;
     if ((color === 'white') !== isWhiteMove) continue;
     const fenBefore = i === 0 ? game.startFen : game.fens[i - 1];
-    positions.push({ moveIndex: i, fenBefore, gameSan: game.moves[i] });
+    let lastMove: [string, string] | undefined;
+    if (i > 0) {
+      const prevFenBefore = i - 1 === 0 ? game.startFen : game.fens[i - 2];
+      const sq = getMoveSquares(prevFenBefore, game.moves[i - 1]);
+      if (sq) lastMove = [sq.from, sq.to];
+    }
+    positions.push({ moveIndex: i, fenBefore, gameSan: game.moves[i], lastMove });
   }
   return positions;
 }
@@ -287,6 +294,7 @@ export function EvalBattlePage() {
     boardRef.current.setPosition(pos.fenBefore, {
       orientation: color,
       movable: color,
+      lastMove: pos.lastMove,
     });
   }, [phase, currentPosIdx]);
 
