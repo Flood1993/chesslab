@@ -179,6 +179,9 @@ export function EvalBattlePage() {
 
   const [games, setGames] = useState<GameEntry[]>([]);
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set(PGN_FILES));
+  const [pgnModalOpen, setPgnModalOpen] = useState(false);
+  const [pgnInput, setPgnInput] = useState('');
+  const [pgnError, setPgnError] = useState('');
   const [selectedGameIdx, setSelectedGameIdx] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [currentPosIdx, setCurrentPosIdx] = useState(0);
@@ -194,6 +197,8 @@ export function EvalBattlePage() {
   const userMovesRef = useRef<string[]>([]);
 
   // Stockfish
+  const pendingAutoSelectRef = useRef<number | null>(null);
+
   const workerRef = useRef<Worker | null>(null);
   const evalQueueRef = useRef<EvalJob[]>([]);
   const evalRunningRef = useRef(false);
@@ -279,6 +284,23 @@ export function EvalBattlePage() {
     ).then(results => setGames(results.flat()));
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (pendingAutoSelectRef.current !== null && games.length > 0) {
+      const idx = pendingAutoSelectRef.current;
+      pendingAutoSelectRef.current = null;
+      evalQueueRef.current = [];
+      evalRunningRef.current = false;
+      currentJobRef.current = null;
+      workerRef.current?.postMessage('stop');
+      setSelectedGameIdx(idx);
+      setPhase('color-select');
+      setResults([]);
+      setViewRowIdx(null);
+      userMovesRef.current = [];
+      boardRef.current?.setPosition(INITIAL_FEN, { movable: 'none' });
+    }
+  }, [games]);
 
   // ---------------------------------------------------------------------------
   // Board sync — playing phase
@@ -416,6 +438,26 @@ export function EvalBattlePage() {
         onOneDone(); // user
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // PGN modal
+  // ---------------------------------------------------------------------------
+
+  function handleLoadPgn() {
+    const text = pgnInput.trim();
+    if (!text) return;
+    const parsed = parseGames(text, 'Custom PGN');
+    if (parsed.length === 0) {
+      setPgnError('No valid games found in PGN.');
+      return;
+    }
+    setGames(prev => [...parsed, ...prev.filter(g => g.sourceFile !== 'Custom PGN')]);
+    setCollapsedFiles(prev => { const next = new Set(prev); next.delete('Custom PGN'); return next; });
+    if (parsed.length === 1) pendingAutoSelectRef.current = 0;
+    setPgnModalOpen(false);
+    setPgnInput('');
+    setPgnError('');
   }
 
   // ---------------------------------------------------------------------------
@@ -579,7 +621,10 @@ export function EvalBattlePage() {
     <>
       {/* Left column — game list */}
       <div id="eval-battle-list" className="side-panel">
-        <h3>Games {games.length > 0 ? `(${games.length})` : ''}</h3>
+        <div className="eval-list-header">
+          <h3>Games {games.length > 0 ? `(${games.length})` : ''}</h3>
+          <button className="pgn-load-btn" onClick={() => setPgnModalOpen(true)}>Load from PGN</button>
+        </div>
         <div className="blunder-scroll">
           {games.length === 0 && (
             <p className="blunder-empty">
@@ -587,7 +632,7 @@ export function EvalBattlePage() {
               Make sure PGN files are in public/chess/.
             </p>
           )}
-          {PGN_FILES.map(file => {
+          {['Custom PGN', ...PGN_FILES].map(file => {
             const fileGames = games.map((g, i) => ({ g, i })).filter(({ g }) => g.sourceFile === file);
             if (fileGames.length === 0) return null;
             const collapsed = collapsedFiles.has(file);
@@ -633,6 +678,32 @@ export function EvalBattlePage() {
       <div id="eval-battle-panel" className="side-panel">
         {renderRightPanel()}
       </div>
+
+      {/* PGN input modal */}
+      {pgnModalOpen && (
+        <div className="pgn-modal-overlay" onClick={() => { setPgnModalOpen(false); setPgnInput(''); setPgnError(''); }}>
+          <div className="pgn-modal" onClick={e => e.stopPropagation()}>
+            <h3>Load from PGN</h3>
+            <textarea
+              className="pgn-modal-textarea"
+              value={pgnInput}
+              onChange={e => { setPgnInput(e.target.value); setPgnError(''); }}
+              placeholder="Paste PGN here…"
+              rows={12}
+              autoFocus
+            />
+            {pgnError && <p className="pgn-modal-error">{pgnError}</p>}
+            <div className="pgn-modal-actions">
+              <button className="pgn-modal-cancel" onClick={() => { setPgnModalOpen(false); setPgnInput(''); setPgnError(''); }}>
+                Cancel
+              </button>
+              <button className="pgn-modal-load" onClick={handleLoadPgn}>
+                Load
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

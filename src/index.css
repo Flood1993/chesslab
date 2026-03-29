@@ -461,6 +461,124 @@ kbd {
   overflow: hidden;
 }
 
+.eval-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eval-list-header h3 {
+  margin: 0;
+}
+
+.pgn-load-btn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #ccc;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.pgn-load-btn:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.pgn-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.pgn-modal {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 20px;
+  width: min(520px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pgn-modal h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #e0e0e0;
+}
+
+.pgn-modal-textarea {
+  width: 100%;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #ccc;
+  font-size: 0.78rem;
+  font-family: monospace;
+  padding: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.pgn-modal-textarea:focus {
+  outline: none;
+  border-color: #666;
+}
+
+.pgn-modal-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #e74c3c;
+}
+
+.pgn-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.pgn-modal-cancel {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #aaa;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.pgn-modal-cancel:hover {
+  border-color: #666;
+  color: #ccc;
+}
+
+.pgn-modal-load {
+  padding: 7px 14px;
+  background: #d5e500;
+  border: none;
+  border-radius: 5px;
+  color: #111;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.pgn-modal-load:hover {
+  opacity: 0.85;
+}
+
 .eval-end-btn {
   width: 100%;
   padding: 8px 12px;
